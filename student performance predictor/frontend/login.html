@@ -1,0 +1,34 @@
+<head>
+    <title>Login Page</title>
+    <link rel="stylesheet" href="login.css">
+</head>
+<body>
+    <div class="container">
+        <div class="img">
+            <img src="School image.png" alt="School image">
+        </div>
+        <div class="form">
+            <h1 style="text-align: center;">Welcome Back</h1>
+            <h4 class="form-title">Please login to your account</h4>
+            <form action="/login" method="post">
+                <label for="student name">Username</label><br>
+                <input type="text" name="student name" placeholder="Name" class="username"><br>
+                <label for="password" >Password</label><br>
+                <input type="password" name="password " placeholder="Password" class="password"><br>
+                <div class="forget">
+                    <input type="submit"value="Forget Password?"class="forget-button">
+                </div>
+                <input type="submit" value="Login" class="button">
+                <div class="divider">Or Login with</div>
+                <div class="login-opt">
+                    <input type="submit" value="Google" class="google">
+                    <input type="submit" value="Facebook" class="facebook">
+                </div>
+                <div>
+                    <p class="signup">Don't have an account? <a href="/signup">Sign Up</a></p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</body>

@@ -1,0 +1,112 @@
+.container {
+    border: 2px solid white;
+    background-color: white;    
+    margin: 50px ;
+    border-radius: 30px;
+    display: flex;
+    justify-content: space-around;
+    font-family: Arial, sans-serif;
+
+}
+.form-title{
+    text-align: center;
+    color: rgb(107, 114, 128);
+}
+.img{
+    display: flex;
+    width: 50vw;
+    height: 75vh;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+body{
+    background-color: rgb(216, 221, 228);
+}
+.form {
+    margin-bottom: 20px;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+.username, .password {
+    display: block;
+    margin-bottom: 10px;
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    transition: all 0.3s ease;
+}  
+.username:focus, .password:focus {
+    border-color: #f97316; /* orange */
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+    outline: none;
+}
+.button{
+    display: block;
+    width: 150px;
+    margin: 20px auto;
+    padding: 10px;
+    border-radius: 10px;
+    background-color: orangered;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+.forget-button{
+    font-size: 0.8em;
+    border: none;
+    outline: none;
+    background: none;
+    color: rgb(151, 146, 146);
+    cursor: pointer;
+    margin-bottom: 10px;
+    display: block;
+    margin-left: 300px;
+}
+.forget-button:hover{
+    cursor: pointer;
+}
+.login-opt{
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    width: auto;
+    margin-bottom: 20px;
+}
+.google,.facebook{
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    width: 150px;
+    padding: 10px;
+}
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 20px;
+  color: #858080;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid #ccc;
+}
+
+.divider::before {
+  margin-right: 10px;
+}
+
+.divider::after {
+  margin-left: 10px;
+}
+.signup{
+    text-align: center;
+    color: rgb(151, 146, 146);
+    margin-top: 20px;
+}
+.signup a{
+    color: orangered;
+    text-decoration: none;
+}

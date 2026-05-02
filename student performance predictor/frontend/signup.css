@@ -1,0 +1,49 @@
+.container {
+    border: 2px solid white;
+    background-color: white;    
+    margin: 50px ;
+    border-radius: 30px;
+    display: flex;
+    justify-content: space-around;
+    font-family: Arial, sans-serif;
+}
+.img{
+    display: flex;
+    width: 50vw;
+    height: 75vh;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+body{
+    background-color: rgb(216, 221, 228);
+}
+.form {
+    margin-bottom: 20px;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+.username, .password, .email {
+    display: block;
+    margin-bottom: 10px;
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    transition: all 0.3s ease;
+}  
+.username:focus, .password:focus, .email:focus {
+    border-color: #f97316; /* orange */
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+    outline: none;
+}
+.button{
+    display: block;
+    width: 150px;
+    margin: 20px auto;
+    padding: 10px;
+    border-radius: 10px;
+    background-color: orangered;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
