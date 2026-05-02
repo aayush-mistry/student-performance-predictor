@@ -1,2 +1,2 @@
 # student-portfolio
-Student Performance Predictor is a machine learning-based web application that predicts student academic performance based on input features. Built using Python and FastAPI, the system provides real-time predictions through an API, making it efficient, scalable, and easy to integrate with a frontend interface.
+Student Performance Predictor is a machine learning-based web application that predicts student academic outcomes using input features. Built with FastAPI, it provides a fast and scalable backend for real-time predictions through an API. The project demonstrates the integration of data processing, model inference, and web deployment, making it suitable for educational analytics and practical ML applications.
