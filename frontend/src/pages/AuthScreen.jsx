@@ -102,6 +102,11 @@ export default function AuthScreen({ onLogin }) {
 
           <h2>{isSignup ? "Create an Account" : "Welcome Back"}</h2>
           <p>{isSignup ? "Create your student profile to continue." : `Login to view your ${role} dashboard.`}</p>
+          {!isSignup && role === 'admin' && (
+            <p style={{marginTop: '-18px', fontSize: '0.9rem'}}>
+              Demo admin: username admin, password password
+            </p>
+          )}
 
           <form className="auth-form" onSubmit={handleAuthSubmit}>
             <label htmlFor="name">Username</label>

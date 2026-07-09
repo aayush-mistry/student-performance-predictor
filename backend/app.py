@@ -4,6 +4,8 @@ from statistics import mean
 import json
 import os
 
+from sqlalchemy import func
+
 from models import db, User, Student, StudyHours, Activity, ExamMark, Attendance, Assignment, Prediction
 
 app = Flask(__name__)
@@ -116,16 +118,28 @@ def calculate_prediction_logic(student_dict):
 
 @app.post("/api/admin/login")
 def admin_login():
-    data = request.json
-    user = User.query.filter_by(username=data.get('username'), password=data.get('password'), role='admin').first()
+    data = request.json or {}
+    username = (data.get('username') or '').strip()
+    password = (data.get('password') or '').strip()
+    user = User.query.filter(
+        func.lower(User.username) == username.lower(),
+        User.password == password,
+        User.role == 'admin'
+    ).first()
     if user:
         return jsonify({"success": True, "userId": user.id, "role": "admin"})
     return jsonify({"success": False, "message": "Invalid credentials"}), 401
 
 @app.post("/api/student/login")
 def student_login():
-    data = request.json
-    user = User.query.filter_by(username=data.get('username'), password=data.get('password'), role='student').first()
+    data = request.json or {}
+    username = (data.get('username') or '').strip()
+    password = (data.get('password') or '').strip()
+    user = User.query.filter(
+        func.lower(User.username) == username.lower(),
+        User.password == password,
+        User.role == 'student'
+    ).first()
     if user:
         return jsonify({"success": True, "userId": user.id, "role": "student", "studentId": user.student_profile.id if user.student_profile else None})
     return jsonify({"success": False, "message": "Invalid credentials"}), 401
