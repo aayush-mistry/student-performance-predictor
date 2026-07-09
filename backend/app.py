@@ -1,126 +1,84 @@
-from __future__ import annotations
-
-from statistics import mean
-
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
+from statistics import mean
+import json
+import os
 
+from models import db, User, Student, StudyHours, Activity, ExamMark, Attendance, Assignment, Prediction
 
 app = Flask(__name__)
 CORS(app)
 
+basedir = os.path.abspath(os.path.dirname(__file__))
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'school.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-STUDENT_PROFILE = {
-    "name": "Student Performance Overview",
-    "studyHours": {
-        "tuition": 2.5,
-        "selfStudy": 3.0,
-        "sports": 1.0,
-        "mobileScreen": 2.2,
-        "sleep": 7.5,
-        "revision": 1.4,
-    },
-    "weeklyActivity": [
-        {"day": "Mon", "study": 4.7, "screen": 2.0, "sports": 1.0},
-        {"day": "Tue", "study": 5.0, "screen": 1.8, "sports": 0.8},
-        {"day": "Wed", "study": 4.1, "screen": 2.6, "sports": 1.2},
-        {"day": "Thu", "study": 5.4, "screen": 1.7, "sports": 0.7},
-        {"day": "Fri", "study": 4.8, "screen": 2.1, "sports": 1.0},
-        {"day": "Sat", "study": 3.6, "screen": 3.0, "sports": 1.5},
-        {"day": "Sun", "study": 2.8, "screen": 3.4, "sports": 1.8},
-    ],
-    "previousExams": [
-        {
-            "name": "Unit Test 1",
-            "maths": 72,
-            "science": 76,
-            "ss": 70,
-            "english": 74,
-            "gujarati": 82,
-            "hindi": 78,
-        },
-        {
-            "name": "Mid Term",
-            "maths": 78,
-            "science": 80,
-            "ss": 73,
-            "english": 79,
-            "gujarati": 84,
-            "hindi": 81,
-        },
-        {
-            "name": "Unit Test 2",
-            "maths": 83,
-            "science": 85,
-            "ss": 78,
-            "english": 82,
-            "gujarati": 87,
-            "hindi": 84,
-        },
-    ],
-    "attendance": [
-        {"date": "2026-04-01", "status": "present"},
-        {"date": "2026-04-02", "status": "present"},
-        {"date": "2026-04-03", "status": "present"},
-        {"date": "2026-04-04", "status": "holiday"},
-        {"date": "2026-04-05", "status": "holiday"},
-        {"date": "2026-04-06", "status": "present"},
-        {"date": "2026-04-07", "status": "absent"},
-        {"date": "2026-04-08", "status": "present"},
-        {"date": "2026-04-09", "status": "present"},
-        {"date": "2026-04-10", "status": "present"},
-        {"date": "2026-04-11", "status": "holiday"},
-        {"date": "2026-04-12", "status": "holiday"},
-        {"date": "2026-04-13", "status": "present"},
-        {"date": "2026-04-14", "status": "present"},
-        {"date": "2026-04-15", "status": "present"},
-        {"date": "2026-04-16", "status": "present"},
-        {"date": "2026-04-17", "status": "absent"},
-        {"date": "2026-04-18", "status": "holiday"},
-        {"date": "2026-04-19", "status": "holiday"},
-        {"date": "2026-04-20", "status": "present"},
-        {"date": "2026-04-21", "status": "present"},
-        {"date": "2026-04-22", "status": "present"},
-        {"date": "2026-04-23", "status": "present"},
-        {"date": "2026-04-24", "status": "present"},
-        {"date": "2026-04-25", "status": "holiday"},
-        {"date": "2026-04-26", "status": "holiday"},
-        {"date": "2026-04-27", "status": "present"},
-        {"date": "2026-04-28", "status": "present"},
-        {"date": "2026-04-29", "status": "present"},
-        {"date": "2026-04-30", "status": "present"},
-    ],
-    "assignments": [
-        {"subject": "Maths", "assigned": 12, "completed": 11},
-        {"subject": "Science", "assigned": 10, "completed": 9},
-        {"subject": "SS", "assigned": 8, "completed": 7},
-        {"subject": "English", "assigned": 9, "completed": 8},
-        {"subject": "Gujarati", "assigned": 7, "completed": 7},
-        {"subject": "Hindi", "assigned": 7, "completed": 6},
-    ],
-    "help": {
-        "officeNumber": "+91 79 2456 1188",
-        "email": "schooloffice@example.edu",
-        "teacherNumber": "+91 98765 43210",
-    },
-}
+db.init_app(app)
 
+def serialize_student(student):
+    # Convert DB student model to a dict format expected by the frontend
+    # studyHours
+    sh = student.study_hours
+    study_hours_dict = {
+        "tuition": sh.tuition if sh else 0,
+        "selfStudy": sh.self_study if sh else 0,
+        "sports": sh.sports if sh else 0,
+        "mobileScreen": sh.mobile_screen if sh else 0,
+        "sleep": sh.sleep if sh else 0,
+        "revision": sh.revision if sh else 0,
+    }
+    
+    # weeklyActivity
+    activities = [{"day": a.day, "study": a.study, "screen": a.screen, "sports": a.sports} for a in student.activities]
+    
+    # exams
+    exams = [{"name": e.name, "maths": e.maths, "science": e.science, "ss": e.ss, "english": e.english, "gujarati": e.gujarati, "hindi": e.hindi} for e in student.exams]
+    
+    # attendance
+    attendances = [{"date": a.date, "status": a.status} for a in student.attendance]
+    
+    # assignments
+    assignments = [{"subject": a.subject, "assigned": a.assigned, "completed": a.completed} for a in student.assignments]
+    
+    return {
+        "id": student.id,
+        "name": student.name,
+        "roll_no": student.roll_no,
+        "current_class": student.current_class,
+        "division": student.division,
+        "parent_name": student.parent_name,
+        "contact": student.contact,
+        "email": student.email,
+        "studyHours": study_hours_dict,
+        "weeklyActivity": activities,
+        "previousExams": exams,
+        "attendance": attendances,
+        "assignments": assignments,
+        "help": {
+            "officeNumber": "+91 79 2456 1188",
+            "email": "schooloffice@example.edu",
+            "teacherNumber": "+91 98765 43210",
+        },
+    }
 
-def calculate_prediction(profile: dict) -> dict:
+def calculate_prediction_logic(student_dict):
     subjects = ["maths", "science", "ss", "english", "gujarati", "hindi"]
-    latest_exam = profile["previousExams"][-1]
-    previous_average = mean(latest_exam[subject] for subject in subjects)
+    if not student_dict["previousExams"]:
+        return None
+        
+    latest_exam = student_dict["previousExams"][-1]
+    previous_average = mean(latest_exam.get(subject, 0) for subject in subjects)
 
-    attendance_days = [day for day in profile["attendance"] if day["status"] != "holiday"]
+    attendance_days = [day for day in student_dict["attendance"] if day["status"] != "holiday"]
     present_days = [day for day in attendance_days if day["status"] == "present"]
-    attendance_rate = len(present_days) / len(attendance_days)
+    attendance_rate = (len(present_days) / len(attendance_days)) if attendance_days else 0
 
-    assigned = sum(item["assigned"] for item in profile["assignments"])
-    completed = sum(item["completed"] for item in profile["assignments"])
-    assignment_rate = completed / assigned
+    assigned = sum(item["assigned"] for item in student_dict["assignments"])
+    completed = sum(item["completed"] for item in student_dict["assignments"])
+    assignment_rate = (completed / assigned) if assigned > 0 else 0
 
-    weekly_study = mean(day["study"] for day in profile["weeklyActivity"])
-    weekly_screen = mean(day["screen"] for day in profile["weeklyActivity"])
+    weekly_study = mean(day["study"] for day in student_dict["weeklyActivity"]) if student_dict["weeklyActivity"] else 0
+    weekly_screen = mean(day["screen"] for day in student_dict["weeklyActivity"]) if student_dict["weeklyActivity"] else 0
 
     study_bonus = min(7, max(-4, (weekly_study - 3.5) * 2.2))
     attendance_bonus = (attendance_rate - 0.85) * 16
@@ -131,7 +89,7 @@ def calculate_prediction(profile: dict) -> dict:
     predicted_average = round(max(0, min(100, predicted_average)), 1)
 
     reasons = [
-        f"Last exam average is strong at {previous_average:.1f}%.",
+        f"Last exam average is strong at {previous_average:.1f}%." if previous_average >= 80 else f"Last exam average is {previous_average:.1f}%.",
         f"Attendance is {attendance_rate * 100:.1f}%, which supports steady learning.",
         f"Assignment completion is {assignment_rate * 100:.1f}%, adding confidence to the prediction.",
     ]
@@ -154,16 +112,178 @@ def calculate_prediction(profile: dict) -> dict:
         "reasons": reasons,
     }
 
+# ----------------- AUTH -----------------
 
+@app.post("/api/admin/login")
+def admin_login():
+    data = request.json
+    user = User.query.filter_by(username=data.get('username'), password=data.get('password'), role='admin').first()
+    if user:
+        return jsonify({"success": True, "userId": user.id, "role": "admin"})
+    return jsonify({"success": False, "message": "Invalid credentials"}), 401
+
+@app.post("/api/student/login")
+def student_login():
+    data = request.json
+    user = User.query.filter_by(username=data.get('username'), password=data.get('password'), role='student').first()
+    if user:
+        return jsonify({"success": True, "userId": user.id, "role": "student", "studentId": user.student_profile.id if user.student_profile else None})
+    return jsonify({"success": False, "message": "Invalid credentials"}), 401
+
+
+# ----------------- STUDENT ENDPOINTS -----------------
+
+@app.get("/api/students")
+def get_students():
+    students = Student.query.all()
+    return jsonify([serialize_student(s) for s in students])
+
+@app.get("/api/students/<int:id>")
+def get_student(id):
+    student = Student.query.get(id)
+    if not student:
+        return jsonify({"message": "Not found"}), 404
+    return jsonify(serialize_student(student))
+
+@app.post("/api/students")
+def create_student():
+    data = request.json
+    # Create user first
+    user = User(username=data.get('username', data['name']), password='password', role='student')
+    db.session.add(user)
+    db.session.flush()
+
+    student = Student(
+        user_id=user.id,
+        name=data['name'],
+        roll_no=data.get('roll_no'),
+        current_class=data.get('current_class'),
+        division=data.get('division'),
+        parent_name=data.get('parent_name'),
+        contact=data.get('contact'),
+        email=data.get('email')
+    )
+    db.session.add(student)
+    db.session.commit()
+    
+    return jsonify(serialize_student(student)), 201
+
+@app.put("/api/students/<int:id>")
+def update_student(id):
+    student = Student.query.get(id)
+    if not student:
+        return jsonify({"message": "Not found"}), 404
+    data = request.json
+    student.name = data.get('name', student.name)
+    student.roll_no = data.get('roll_no', student.roll_no)
+    student.current_class = data.get('current_class', student.current_class)
+    student.division = data.get('division', student.division)
+    student.parent_name = data.get('parent_name', student.parent_name)
+    student.contact = data.get('contact', student.contact)
+    student.email = data.get('email', student.email)
+    db.session.commit()
+    return jsonify(serialize_student(student))
+
+@app.delete("/api/students/<int:id>")
+def delete_student(id):
+    student = Student.query.get(id)
+    if student:
+        db.session.delete(student.user) # Cascades delete to student
+        db.session.commit()
+        return jsonify({"success": True})
+    return jsonify({"message": "Not found"}), 404
+
+
+# ----------------- MARKS, ATTENDANCE, ASSIGNMENTS -----------------
+
+@app.put("/api/marks/<int:student_id>")
+def update_marks(student_id):
+    data = request.json
+    # Example data: {"name": "Mid Term", "maths": 80, ...}
+    mark = ExamMark.query.filter_by(student_id=student_id, name=data['name']).first()
+    if not mark:
+        mark = ExamMark(student_id=student_id, name=data['name'])
+        db.session.add(mark)
+    
+    mark.maths = data.get('maths', mark.maths)
+    mark.science = data.get('science', mark.science)
+    mark.ss = data.get('ss', mark.ss)
+    mark.english = data.get('english', mark.english)
+    mark.gujarati = data.get('gujarati', mark.gujarati)
+    mark.hindi = data.get('hindi', mark.hindi)
+    
+    db.session.commit()
+    return jsonify({"success": True})
+
+@app.put("/api/attendance/<int:student_id>")
+def update_attendance(student_id):
+    data = request.json
+    # Expected data: {"date": "2026-04-10", "status": "absent"}
+    att = Attendance.query.filter_by(student_id=student_id, date=data['date']).first()
+    if not att:
+        att = Attendance(student_id=student_id, date=data['date'])
+        db.session.add(att)
+    att.status = data['status']
+    db.session.commit()
+    return jsonify({"success": True})
+
+@app.put("/api/assignments/<int:student_id>")
+def update_assignment(student_id):
+    data = request.json
+    # Expected data: {"subject": "Maths", "completed": 12, "assigned": 12}
+    assign = Assignment.query.filter_by(student_id=student_id, subject=data['subject']).first()
+    if not assign:
+        assign = Assignment(student_id=student_id, subject=data['subject'])
+        db.session.add(assign)
+    assign.assigned = data.get('assigned', assign.assigned)
+    assign.completed = data.get('completed', assign.completed)
+    db.session.commit()
+    return jsonify({"success": True})
+
+
+# ----------------- PREDICTION AND LEGACY COMPAT -----------------
+
+@app.get("/api/prediction/<int:id>")
+def get_prediction(id):
+    student = Student.query.get(id)
+    if not student:
+        return jsonify({"message": "Not found"}), 404
+        
+    s_dict = serialize_student(student)
+    pred_data = calculate_prediction_logic(s_dict)
+    
+    # Update or create prediction in DB
+    if pred_data:
+        pred = Prediction.query.filter_by(student_id=id).first()
+        if not pred:
+            pred = Prediction(student_id=id)
+            db.session.add(pred)
+        pred.predicted_average = pred_data['predictedAverage']
+        pred.previous_average = pred_data['previousAverage']
+        pred.attendance_rate = pred_data['attendanceRate']
+        pred.assignment_rate = pred_data['assignmentRate']
+        pred.weekly_study_average = pred_data['weeklyStudyAverage']
+        pred.weekly_screen_average = pred_data['weeklyScreenAverage']
+        pred.reasons = json.dumps(pred_data['reasons'])
+        db.session.commit()
+        return jsonify(pred_data)
+    
+    return jsonify({"message": "Not enough data"}), 400
+
+# Legacy endpoints for backward compatibility if needed by frontend
 @app.get("/api/student")
-def student() -> tuple:
-    return jsonify(STUDENT_PROFILE)
-
+def legacy_student():
+    student = Student.query.first()
+    if student:
+        return jsonify(serialize_student(student))
+    return jsonify({"message": "No student found"}), 404
 
 @app.get("/api/prediction")
-def prediction() -> tuple:
-    return jsonify(calculate_prediction(STUDENT_PROFILE))
-
+def legacy_prediction():
+    student = Student.query.first()
+    if student:
+        return get_prediction(student.id)
+    return jsonify({"message": "No student found"}), 404
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
