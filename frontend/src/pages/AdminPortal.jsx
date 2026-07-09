@@ -11,7 +11,8 @@ import {
   ClipboardList,
   Edit,
   Trash2,
-  Plus
+  Plus,
+  Download,
 } from "lucide-react";
 import {
   Bar,
@@ -67,20 +68,20 @@ export default function AdminPortal({ currentUser, onLogout }) {
   }[activeTab];
 
   return (
-    <div className="app-shell">
-      <nav className="topbar" style={{ backgroundColor: '#1e293b', color: 'white' }}>
-        <button className="menu-button" style={{color: 'white'}} onClick={() => setIsMenuOpen((value) => !value)}>
+    <div className="app-shell admin-shell">
+      <nav className="topbar admin-topbar">
+        <button className="menu-button admin-menu-button" onClick={() => setIsMenuOpen((value) => !value)} aria-label="Toggle admin menu">
           {isMenuOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
-        <div className="brand" style={{color: 'white'}}>
-          <span className="brand-mark"><TrendingUp size={22} color="white" /></span>
+        <div className="brand admin-brand">
+          <span className="brand-mark admin-brand-mark"><TrendingUp size={22} /></span>
           <div>
             <strong>Admin Portal</strong>
-            <small style={{color: '#cbd5e1'}}>{currentUser?.name}</small>
+            <small>{currentUser?.name || "Administrator"}</small>
           </div>
         </div>
-        <div className="auth-links">
-          <button onClick={handleLogout} type="button" style={{color: 'white'}}>
+        <div className="auth-links admin-actions">
+          <button onClick={handleLogout} type="button">
             <LogOut size={17} />
             Logout
           </button>
@@ -88,7 +89,7 @@ export default function AdminPortal({ currentUser, onLogout }) {
       </nav>
 
       <div className="layout">
-        <aside className={`sidebar ${isMenuOpen ? "open" : ""}`} style={{backgroundColor: '#f8fafc'}}>
+        <aside className={`sidebar admin-sidebar ${isMenuOpen ? "open" : ""}`}>
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -172,38 +173,51 @@ function AdminDashboard({ students }) {
   ];
 
   return (
-    <div>
-      <section className="hero-panel" style={{backgroundColor: '#0f172a'}}>
+    <div className="admin-page">
+      <section className="hero-panel admin-hero">
         <div>
-          <p style={{color: '#94a3b8'}}>Overview</p>
-          <h1 style={{color: 'white'}}>Admin Dashboard</h1>
+          <p>Overview</p>
+          <h1>Admin Dashboard</h1>
+          <span>Monitor performance, attendance, assignment progress, and students who may need support.</span>
+        </div>
+        <div className="admin-hero-stat">
+          <strong>{totalStudents}</strong>
+          <small>Students</small>
         </div>
       </section>
       
-      <section className="panel-grid" style={{marginTop: '1rem'}}>
-        <div className="panel" style={{display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
-           <Users size={32} color="#3b82f6" />
-           <h3 style={{margin: '0.5rem 0 0 0'}}>{totalStudents}</h3>
-           <p style={{color: '#64748b'}}>Total Students</p>
+      <section className="admin-metrics-grid">
+        <div className="admin-metric-card blue">
+          <span><Users size={22} /></span>
+          <div>
+            <strong>{totalStudents}</strong>
+            <p>Total Students</p>
+          </div>
         </div>
-        <div className="panel" style={{display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
-           <CalendarDays size={32} color="#22c55e" />
-           <h3 style={{margin: '0.5rem 0 0 0'}}>{avgAttendance}%</h3>
-           <p style={{color: '#64748b'}}>Avg Attendance</p>
+        <div className="admin-metric-card green">
+          <span><CalendarDays size={22} /></span>
+          <div>
+            <strong>{avgAttendance}%</strong>
+            <p>Avg Attendance</p>
+          </div>
         </div>
-        <div className="panel" style={{display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
-           <ClipboardList size={32} color="#f59e0b" />
-           <h3 style={{margin: '0.5rem 0 0 0'}}>{totalCompleted}</h3>
-           <p style={{color: '#64748b'}}>Assignments Done</p>
+        <div className="admin-metric-card amber">
+          <span><ClipboardList size={22} /></span>
+          <div>
+            <strong>{totalCompleted}</strong>
+            <p>Assignments Done</p>
+          </div>
         </div>
-        <div className="panel" style={{display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
-           <AlertTriangle size={32} color="#ef4444" />
-           <h3 style={{margin: '0.5rem 0 0 0'}}>{atRisk}</h3>
-           <p style={{color: '#64748b'}}>Students At Risk</p>
+        <div className="admin-metric-card red">
+          <span><AlertTriangle size={22} /></span>
+          <div>
+            <strong>{atRisk}</strong>
+            <p>Students At Risk</p>
+          </div>
         </div>
       </section>
 
-      <section className="panel-grid" style={{marginTop: '1rem'}}>
+      <section className="panel-grid admin-chart-grid">
         <div className="panel large">
           <div className="panel-title">
             <BookOpen size={20} />
@@ -269,13 +283,20 @@ function StudentManagement({ students, refresh }) {
   };
 
   return (
-    <div>
-      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
-        <h2>Manage Students</h2>
+    <div className="admin-page">
+      <div className="admin-section-header">
         <div>
-          <button onClick={handleExportCSV} style={{marginRight: '0.5rem', padding: '0.5rem 1rem', background: '#e2e8f0', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Export CSV</button>
-          <button onClick={() => setShowAddForm(true)} style={{padding: '0.5rem 1rem', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>
-            <Plus size={16} style={{verticalAlign: 'middle', marginRight: '4px'}} /> Add Student
+          <p>Records</p>
+          <h1>Manage Students</h1>
+        </div>
+        <div className="admin-toolbar">
+          <button className="secondary-action" onClick={handleExportCSV}>
+            <Download size={16} />
+            Export CSV
+          </button>
+          <button className="primary-action" onClick={() => setShowAddForm(true)}>
+            <Plus size={16} />
+            Add Student
           </button>
         </div>
       </div>
@@ -288,28 +309,38 @@ function StudentManagement({ students, refresh }) {
         />
       )}
 
-      <div className="panel" style={{overflowX: 'auto'}}>
-        <table style={{width: '100%', borderCollapse: 'collapse', textAlign: 'left'}}>
+      <div className="panel admin-table-panel">
+        <table className="admin-table">
           <thead>
-            <tr style={{borderBottom: '1px solid #e2e8f0'}}>
-              <th style={{padding: '1rem'}}>Roll No</th>
-              <th style={{padding: '1rem'}}>Name</th>
-              <th style={{padding: '1rem'}}>Class</th>
-              <th style={{padding: '1rem'}}>Actions</th>
+            <tr>
+              <th>Roll No</th>
+              <th>Name</th>
+              <th>Class</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {students.map(s => (
-              <tr key={s.id} style={{borderBottom: '1px solid #f1f5f9'}}>
-                <td style={{padding: '1rem'}}>{s.roll_no}</td>
-                <td style={{padding: '1rem'}}>{s.name}</td>
-                <td style={{padding: '1rem'}}>{s.current_class} - {s.division}</td>
-                <td style={{padding: '1rem'}}>
-                  <button onClick={() => setEditingStudent(s)} style={{background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', marginRight: '1rem'}}><Edit size={18}/></button>
-                  <button onClick={() => handleDelete(s.id)} style={{background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer'}}><Trash2 size={18}/></button>
+              <tr key={s.id}>
+                <td>{s.roll_no || "-"}</td>
+                <td>
+                  <strong>{s.name}</strong>
+                  <span>{s.email || "No email"}</span>
+                </td>
+                <td>{s.current_class || "-"}{s.division ? ` - ${s.division}` : ""}</td>
+                <td>
+                  <div className="table-actions">
+                    <button aria-label={`Edit ${s.name}`} onClick={() => setEditingStudent(s)}><Edit size={18}/></button>
+                    <button aria-label={`Delete ${s.name}`} className="danger" onClick={() => handleDelete(s.id)}><Trash2 size={18}/></button>
+                  </div>
                 </td>
               </tr>
             ))}
+            {!students.length && (
+              <tr>
+                <td className="empty-table" colSpan="4">No students found.</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -335,23 +366,34 @@ function StudentForm({ student, onClose, onSave }) {
   };
 
   return (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-      backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', 
-      alignItems: 'center', justifyContent: 'center', zIndex: 1000
-    }}>
-      <div className="panel" style={{width: '400px', maxWidth: '90%'}}>
-        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
+    <div className="modal-backdrop">
+      <div className="panel admin-modal">
+        <div className="modal-title-row">
           <h3>{student ? 'Edit Student' : 'Add Student'}</h3>
-          <button onClick={onClose} style={{background: 'none', border: 'none', cursor: 'pointer'}}><X size={20}/></button>
+          <button onClick={onClose} aria-label="Close form"><X size={20}/></button>
         </div>
-        <form onSubmit={handleSubmit} style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-          <input name="name" defaultValue={student?.name} placeholder="Full Name" required style={{padding: '0.5rem', border: '1px solid #ccc', borderRadius: '4px'}} />
-          <input name="roll_no" defaultValue={student?.roll_no} placeholder="Roll Number" required style={{padding: '0.5rem', border: '1px solid #ccc', borderRadius: '4px'}} />
-          <input name="current_class" defaultValue={student?.current_class} placeholder="Class (e.g. 10)" required style={{padding: '0.5rem', border: '1px solid #ccc', borderRadius: '4px'}} />
-          <input name="division" defaultValue={student?.division} placeholder="Division (e.g. A)" required style={{padding: '0.5rem', border: '1px solid #ccc', borderRadius: '4px'}} />
-          <input name="email" defaultValue={student?.email} placeholder="Email" type="email" required style={{padding: '0.5rem', border: '1px solid #ccc', borderRadius: '4px'}} />
-          <button type="submit" style={{padding: '0.75rem', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'}}>
+        <form className="admin-form" onSubmit={handleSubmit}>
+          <label>
+            Full Name
+            <input name="name" defaultValue={student?.name} placeholder="Full Name" required />
+          </label>
+          <label>
+            Roll Number
+            <input name="roll_no" defaultValue={student?.roll_no} placeholder="Roll Number" required />
+          </label>
+          <label>
+            Class
+            <input name="current_class" defaultValue={student?.current_class} placeholder="Class (e.g. 10)" required />
+          </label>
+          <label>
+            Division
+            <input name="division" defaultValue={student?.division} placeholder="Division (e.g. A)" required />
+          </label>
+          <label>
+            Email
+            <input name="email" defaultValue={student?.email} placeholder="Email" type="email" required />
+          </label>
+          <button className="primary-action full-width" type="submit">
             Save Student
           </button>
         </form>
