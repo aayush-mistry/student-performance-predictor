@@ -114,6 +114,69 @@ def calculate_prediction_logic(student_dict):
         "reasons": reasons,
     }
 
+def get_risk_level(predicted_average, attendance_rate, assignment_rate):
+    if predicted_average < 60 or attendance_rate < 75 or assignment_rate < 70:
+        return "High"
+    if predicted_average < 75 or attendance_rate < 88 or assignment_rate < 85:
+        return "Medium"
+    return "Low"
+
+def get_student_summary(student):
+    student_dict = serialize_student(student)
+    prediction = calculate_prediction_logic(student_dict) or {
+        "predictedAverage": 0,
+        "previousAverage": 0,
+        "attendanceRate": 0,
+        "assignmentRate": 0,
+        "weeklyStudyAverage": 0,
+        "weeklyScreenAverage": 0,
+        "reasons": ["Not enough data is available for prediction."],
+    }
+    subjects = ["maths", "science", "ss", "english", "gujarati", "hindi"]
+    latest_exam = student_dict["previousExams"][-1] if student_dict["previousExams"] else {}
+    weak_subjects = [
+        subject.upper() for subject in subjects
+        if latest_exam.get(subject, 0) and latest_exam.get(subject, 0) < 60
+    ]
+    pending_assignments = sum(
+        max(0, item["assigned"] - item["completed"])
+        for item in student_dict["assignments"]
+    )
+    attendance_days = [day for day in student_dict["attendance"] if day["status"] != "holiday"]
+    present_days = [day for day in attendance_days if day["status"] == "present"]
+    absent_days = [day for day in attendance_days if day["status"] == "absent"]
+    holidays = [day for day in student_dict["attendance"] if day["status"] == "holiday"]
+    risk_level = get_risk_level(
+        prediction["predictedAverage"],
+        prediction["attendanceRate"],
+        prediction["assignmentRate"],
+    )
+    suggestions = list(prediction["reasons"])
+    if weak_subjects:
+        suggestions.append(f"Schedule focused revision for {', '.join(weak_subjects)}.")
+    if pending_assignments:
+        suggestions.append(f"Clear {pending_assignments} pending assignments before the next review.")
+    if prediction["weeklyStudyAverage"] < 3:
+        suggestions.append("Increase daily study time with a fixed revision block.")
+
+    return {
+        **student_dict,
+        "studentId": student_dict["id"],
+        "attendancePercentage": prediction["attendanceRate"],
+        "predictedScore": prediction["predictedAverage"],
+        "riskLevel": risk_level,
+        "weakSubjects": weak_subjects,
+        "pendingAssignments": pending_assignments,
+        "presentDays": len(present_days),
+        "absentDays": len(absent_days),
+        "holidays": len(holidays),
+        "prediction": prediction,
+        "aiSuggestions": suggestions,
+    }
+
+def get_all_student_summaries():
+    return [get_student_summary(student) for student in Student.query.all()]
+
 # ----------------- AUTH -----------------
 
 @app.post("/api/admin/login")
@@ -206,6 +269,56 @@ def delete_student(id):
         db.session.commit()
         return jsonify({"success": True})
     return jsonify({"message": "Not found"}), 404
+
+
+# ----------------- ADMIN ANALYTICS ENDPOINTS -----------------
+
+@app.get("/api/admin/dashboard")
+def admin_dashboard_stats():
+    summaries = get_all_student_summaries()
+    total_students = len(summaries)
+    avg_attendance = round(mean([s["attendancePercentage"] for s in summaries]), 1) if summaries else 0
+    assignments_done = sum(item["completed"] for s in summaries for item in s["assignments"])
+    at_risk = len([s for s in summaries if s["riskLevel"] != "Low"])
+    return jsonify({
+        "totalStudents": total_students,
+        "avgAttendance": avg_attendance,
+        "assignmentsDone": assignments_done,
+        "studentsAtRisk": at_risk,
+    })
+
+@app.get("/api/admin/students")
+def admin_student_summaries():
+    return jsonify(get_all_student_summaries())
+
+@app.get("/api/admin/attendance")
+def admin_attendance_dashboard():
+    summaries = get_all_student_summaries()
+    class_stats = {}
+    for student in summaries:
+        class_name = student["current_class"] or "Unassigned"
+        class_stats.setdefault(class_name, []).append(student["attendancePercentage"])
+    return jsonify({
+        "students": summaries,
+        "classStats": [
+            {
+                "class": class_name,
+                "attendancePercentage": round(mean(values), 1) if values else 0,
+                "students": len(values),
+            }
+            for class_name, values in class_stats.items()
+        ],
+    })
+
+@app.get("/api/admin/assignments")
+def admin_assignment_dashboard():
+    summaries = get_all_student_summaries()
+    return jsonify(summaries)
+
+@app.get("/api/admin/risk")
+def admin_risk_dashboard():
+    summaries = get_all_student_summaries()
+    return jsonify([s for s in summaries if s["riskLevel"] != "Low"])
 
 
 # ----------------- MARKS, ATTENDANCE, ASSIGNMENTS -----------------

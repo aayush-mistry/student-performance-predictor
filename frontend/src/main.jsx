@@ -24,7 +24,7 @@ function App() {
           path="/" 
           element={
             currentUser ? (
-              <Navigate to={currentUser.role === 'admin' ? '/admin' : '/student'} />
+              <Navigate to={currentUser.role === 'admin' ? '/admin/dashboard' : '/student'} />
             ) : (
               <AuthScreen onLogin={handleLogin} />
             )

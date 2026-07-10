@@ -243,7 +243,8 @@ textarea {
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
 }
 
-.sidebar button {
+.sidebar button,
+.sidebar a {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -256,10 +257,13 @@ textarea {
   border-radius: 8px;
   cursor: pointer;
   text-align: left;
+  text-decoration: none;
 }
 
 .sidebar button.active,
-.sidebar button:hover {
+.sidebar button:hover,
+.sidebar a.active,
+.sidebar a:hover {
   color: #fff;
   background: #172033;
 }
@@ -645,7 +649,9 @@ progress {
 }
 
 .admin-sidebar button.active,
-.admin-sidebar button:hover {
+.admin-sidebar button:hover,
+.admin-sidebar a.active,
+.admin-sidebar a:hover {
   background: #2563eb;
 }
 
@@ -713,6 +719,20 @@ progress {
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
 }
 
+.admin-metric-card.clickable {
+  width: 100%;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.admin-metric-card.clickable:hover {
+  transform: translateY(-3px);
+  border-color: #93c5fd;
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.14);
+}
+
 .admin-metric-card > span {
   display: inline-flex;
   align-items: center;
@@ -736,6 +756,13 @@ progress {
   font-weight: 700;
 }
 
+.admin-metric-card small {
+  display: block;
+  margin-top: 10px;
+  color: #2563eb;
+  font-weight: 800;
+}
+
 .admin-metric-card.blue > span {
   color: #1d4ed8;
   background: #dbeafe;
@@ -754,10 +781,6 @@ progress {
 .admin-metric-card.red > span {
   color: #b91c1c;
   background: #fee2e2;
-}
-
-.admin-chart-grid {
-  margin-top: 0;
 }
 
 .admin-section-header {
@@ -789,6 +812,40 @@ progress {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.admin-controls {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.4fr) repeat(4, minmax(150px, 0.8fr));
+  gap: 12px;
+  align-items: center;
+}
+
+.admin-controls label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.admin-controls input,
+.admin-controls select {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  color: #172033;
+  background: transparent;
+  border: 0;
+  outline: 0;
+}
+
+.search-control {
+  grid-column: span 1;
 }
 
 .primary-action,
@@ -832,6 +889,10 @@ progress {
   min-width: 640px;
   border-collapse: collapse;
   text-align: left;
+}
+
+.admin-table.wide-table {
+  min-width: 1040px;
 }
 
 .admin-table th {
@@ -888,6 +949,173 @@ progress {
   height: 120px;
   color: #64748b;
   text-align: center;
+}
+
+.risk-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.risk-badge.high {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.risk-badge.medium {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.risk-badge.low {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+}
+
+.progress-track {
+  width: 100%;
+  height: 10px;
+  overflow: hidden;
+  background: #e2e8f0;
+  border-radius: 999px;
+}
+
+.progress-track span {
+  display: block;
+  height: 100%;
+  background: #2563eb;
+  border-radius: inherit;
+}
+
+.summary-grid,
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.mini-stat-card {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+}
+
+.mini-stat-card span {
+  color: #64748b;
+  font-weight: 800;
+}
+
+.mini-stat-card strong {
+  color: #0f172a;
+  font-size: 1.8rem;
+}
+
+.mini-calendar {
+  display: grid;
+  grid-template-columns: repeat(10, 22px);
+  gap: 4px;
+}
+
+.mini-calendar.large {
+  grid-template-columns: repeat(7, minmax(30px, 1fr));
+  margin-top: 18px;
+}
+
+.mini-calendar span {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  color: #fff;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.mini-calendar.large span {
+  width: 100%;
+  height: 34px;
+}
+
+.mini-calendar .present {
+  background: #22c55e;
+}
+
+.mini-calendar .absent {
+  background: #ef4444;
+}
+
+.mini-calendar .holiday {
+  background: #3b82f6;
+}
+
+.subject-pill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.subject-pill-list span {
+  display: inline-flex;
+  margin: 0;
+  padding: 5px 8px;
+  color: #475569;
+  background: #f1f5f9;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.suggestion-cell {
+  min-width: 280px;
+  line-height: 1.5;
+}
+
+.profile-detail-grid {
+  align-items: start;
+}
+
+.weekly-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.weekly-list div {
+  display: grid;
+  grid-template-columns: 58px 1fr 1fr;
+  gap: 8px;
+  padding: 10px;
+  color: #64748b;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.weekly-list strong {
+  color: #172033;
+}
+
+.loading-panel {
+  min-height: 140px;
+  display: grid;
+  place-items: center;
+  color: #64748b;
+  font-weight: 800;
 }
 
 .modal-backdrop {
@@ -982,6 +1210,12 @@ progress {
   .admin-metrics-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .admin-controls,
+  .summary-grid,
+  .profile-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 700px) {
@@ -1035,6 +1269,20 @@ progress {
   }
 
   .admin-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-controls,
+  .summary-grid,
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mini-calendar {
+    grid-template-columns: repeat(6, 22px);
+  }
+
+  .weekly-list div {
     grid-template-columns: 1fr;
   }
 

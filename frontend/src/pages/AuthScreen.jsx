@@ -51,7 +51,7 @@ export default function AuthScreen({ onLogin }) {
           const data = await res.json();
           if (data.success) {
              onLogin({ role: data.role, userId: data.userId, name: username, studentId: data.studentId });
-             if (data.role === 'admin') navigate('/admin');
+             if (data.role === 'admin') navigate('/admin/dashboard');
              else navigate('/student');
           } else {
              alert(data.message || 'Login failed');
@@ -62,7 +62,7 @@ export default function AuthScreen({ onLogin }) {
       } catch (err) {
         // Fallback for demo
         onLogin({ role, userId: 1, name: username, studentId: 1 });
-        if (role === 'admin') navigate('/admin');
+        if (role === 'admin') navigate('/admin/dashboard');
         else navigate('/student');
       }
     }
