@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   CalendarDays,
@@ -84,6 +84,7 @@ export default function AdminPortal({ currentUser, onLogout }) {
 
       <div className="layout">
         <aside className={`sidebar admin-sidebar ${isMenuOpen ? "open" : ""}`}>
+          <div className="admin-nav-label">Navigation</div>
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -417,7 +418,17 @@ function StudentProfile({ students, isLoading, refresh }) {
       <PageHeader
         eyebrow={student.roll_no || `S${student.id}`}
         title={student.name}
-        actions={<button className="primary-action" onClick={() => setEditingStudent(student)} type="button"><Edit size={16} />Edit Profile</button>}
+        actions={(
+          <>
+            <button className="secondary-action" onClick={() => navigate("/admin/students")} type="button">
+              Back to Students
+            </button>
+            <button className="primary-action" onClick={() => setEditingStudent(student)} type="button">
+              <Edit size={16} />
+              Edit Profile
+            </button>
+          </>
+        )}
       />
       {editingStudent && (
         <StudentForm
@@ -521,40 +532,97 @@ function DataControls({ controls, showRisk = false }) {
         <Search size={18} />
         <input value={controls.search} onChange={(e) => controls.setSearch(e.target.value)} placeholder="Search by name, student ID, or roll number" />
       </label>
-      <label>
-        <Filter size={16} />
-        <select value={controls.classFilter} onChange={(e) => controls.setClassFilter(e.target.value)}>
-          <option value="">All Classes</option>
-          {controls.classes.map(item => <option key={item} value={item}>Class {item}</option>)}
-        </select>
-      </label>
-      <label>
-        <Filter size={16} />
-        <select value={controls.divisionFilter} onChange={(e) => controls.setDivisionFilter(e.target.value)}>
-          <option value="">All Divisions</option>
-          {controls.divisions.map(item => <option key={item} value={item}>Division {item}</option>)}
-        </select>
-      </label>
+      <CustomSelect
+        icon={Filter}
+        options={[{ label: "All Classes", value: "" }, ...controls.classes.map(item => ({ label: `Class ${item}`, value: item }))]}
+        value={controls.classFilter}
+        onChange={controls.setClassFilter}
+      />
+      <CustomSelect
+        icon={Filter}
+        options={[{ label: "All Divisions", value: "" }, ...controls.divisions.map(item => ({ label: `Division ${item}`, value: item }))]}
+        value={controls.divisionFilter}
+        onChange={controls.setDivisionFilter}
+      />
       {showRisk && (
-        <label>
-          <Filter size={16} />
-          <select value={controls.riskFilter} onChange={(e) => controls.setRiskFilter(e.target.value)}>
-            <option value="">All Risk Levels</option>
-            <option value="High">High Risk</option>
-            <option value="Medium">Medium Risk</option>
-            <option value="Low">Low Risk</option>
-          </select>
-        </label>
+        <CustomSelect
+          icon={Filter}
+          options={[
+            { label: "All Risk Levels", value: "" },
+            { label: "High Risk", value: "High" },
+            { label: "Medium Risk", value: "Medium" },
+            { label: "Low Risk", value: "Low" },
+          ]}
+          value={controls.riskFilter}
+          onChange={controls.setRiskFilter}
+        />
       )}
-      <label>
-        <TrendingUp size={16} />
-        <select value={controls.sortBy} onChange={(e) => controls.setSortBy(e.target.value)}>
-          <option value="marks">Sort by Marks</option>
-          <option value="attendance">Sort by Attendance</option>
-          <option value="prediction">Sort by Prediction</option>
-          <option value="assignments">Sort by Assignments</option>
-        </select>
-      </label>
+      <CustomSelect
+        icon={TrendingUp}
+        options={[
+          { label: "Sort by Marks", value: "marks" },
+          { label: "Sort by Attendance", value: "attendance" },
+          { label: "Sort by Prediction", value: "prediction" },
+          { label: "Sort by Assignments", value: "assignments" },
+        ]}
+        value={controls.sortBy}
+        onChange={controls.setSortBy}
+      />
+    </div>
+  );
+}
+
+function CustomSelect({ icon: Icon, options, value, onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectRef = useRef(null);
+  const selected = options.find(option => option.value === value) || options[0];
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const handlePointerDown = (event) => {
+      if (selectRef.current && !selectRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
+  return (
+    <div className={`custom-select ${isOpen ? "open" : ""}`} ref={selectRef}>
+      <button className="custom-select-trigger" onClick={() => setIsOpen(open => !open)} type="button">
+        <Icon size={16} />
+        <span>{selected.label}</span>
+        <span className="custom-select-arrow" aria-hidden="true" />
+      </button>
+      {isOpen && (
+        <div className="custom-select-menu">
+          {options.map(option => (
+            <button
+              className={option.value === value ? "selected" : ""}
+              key={option.value || option.label}
+              onClick={() => {
+                onChange(option.value);
+                setIsOpen(false);
+              }}
+              type="button"
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
