@@ -7,26 +7,12 @@ import {
   LogOut,
   Menu,
   X,
-  BookOpen,
   ClipboardList,
   Edit,
   Trash2,
   Plus,
   Download,
 } from "lucide-react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  PieChart,
-  Pie,
-  Cell
-} from "recharts";
 import { useNavigate } from "react-router-dom";
 
 const API_BASE = "http://127.0.0.1:5000/api";
@@ -126,8 +112,6 @@ function AdminDashboard({ students }) {
   let atRisk = 0;
   
   const subjects = ["maths", "science", "ss", "english", "gujarati", "hindi"];
-  let subjectScores = { maths: 0, science: 0, ss: 0, english: 0, gujarati: 0, hindi: 0 };
-  let examCount = 0;
 
   students.forEach(s => {
     // Attendance
@@ -143,14 +127,6 @@ function AdminDashboard({ students }) {
       totalCompleted += a.completed;
     });
 
-    // Subject Performance
-    s.previousExams.forEach(e => {
-      examCount++;
-      subjects.forEach(sub => {
-        subjectScores[sub] += (e[sub] || 0);
-      });
-    });
-    
     // Simple at risk check (e.g., if predicted < 60)
     // Real app would fetch pred per student here, or we calculate a rough estimate based on latest exam
     if (s.previousExams.length > 0) {
@@ -161,16 +137,6 @@ function AdminDashboard({ students }) {
   });
 
   const avgAttendance = totalAttendanceDays ? Math.round((totalPresent / totalAttendanceDays) * 100) : 0;
-  
-  const subjectChartData = subjects.map(sub => ({
-    name: sub.toUpperCase(),
-    average: examCount ? Math.round(subjectScores[sub] / examCount) : 0
-  }));
-
-  const pieData = [
-    { name: 'Present', value: totalPresent, color: '#22c55e' },
-    { name: 'Absent', value: totalAttendanceDays - totalPresent, color: '#ef4444' }
-  ];
 
   return (
     <div className="admin-page">
@@ -213,44 +179,6 @@ function AdminDashboard({ students }) {
           <div>
             <strong>{atRisk}</strong>
             <p>Students At Risk</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="panel-grid admin-chart-grid">
-        <div className="panel large">
-          <div className="panel-title">
-            <BookOpen size={20} />
-            <h2>Subject Performance</h2>
-          </div>
-          <div className="chart">
-            <ResponsiveContainer>
-              <BarChart data={subjectChartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                <YAxis domain={[0, 100]} />
-                <Tooltip />
-                <Bar dataKey="average" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-        
-        <div className="panel">
-          <div className="panel-title">
-            <CalendarDays size={20} />
-            <h2>Overall Attendance</h2>
-          </div>
-          <div className="chart pie">
-            <ResponsiveContainer>
-              <PieChart>
-                <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={60} outerRadius={90}>
-                  {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
           </div>
         </div>
       </section>
