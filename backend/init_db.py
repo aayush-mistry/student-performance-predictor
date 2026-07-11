@@ -1,5 +1,5 @@
 from app import app, serialize_student, calculate_prediction_logic
-from models import db, User, Student, StudyHours, Activity, ExamMark, Attendance, Assignment, Prediction, Exam
+from models import db, User, Student, StudyHours, Activity, ExamMark, Attendance, Assignment, Prediction, Exam, Event
 import json
 
 SUBJECTS = ['maths', 'science', 'ss', 'english', 'gujarati', 'hindi']
@@ -27,6 +27,22 @@ EXAM_RECORDS = [
     ("Mathematics", "Unit Test 2", "Unit Test", "10", "A", "2026-06-10", "09:00 AM", "10:00 AM", "1 hour", "A-201", 25, "Completed", True),
     ("Science", "Unit Test 2", "Unit Test", "10", "A", "2026-06-12", "09:00 AM", "10:00 AM", "1 hour", "A-202", 25, "Completed", True),
     ("English", "Mid Term Oral", "Mid Term", "10", "A", "2026-06-18", "11:00 AM", "11:45 AM", "45 minutes", "Language Lab", 20, "Completed", False),
+]
+
+EVENT_RECORDS = [
+    ("Independence Day Celebration", "National Celebrations", "Flag hoisting, patriotic performances, and student speeches.", "2026-08-15", "08:00 AM", "10:30 AM", "Main Ground", "Social Science Department", "All", 800, "2026-08-10", "https://images.unsplash.com/photo-1532375810709-75b1da00537c?auto=format&fit=crop&w=900&q=80", "High", "Upcoming", True),
+    ("Science Fair", "Competitions", "Model exhibition and science demonstrations for class teams.", "2026-07-26", "09:30 AM", "02:00 PM", "Science Block", "Science Club", "8,9,10", 120, "2026-07-20", "https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=900&q=80", "High", "Upcoming", True),
+    ("Inter-School Coding Competition", "Competitions", "Algorithmic problem solving and web prototype challenge.", "2026-08-02", "10:00 AM", "01:00 PM", "Computer Lab", "IT Department", "9,10", 60, "2026-07-28", "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=80", "High", "Upcoming", True),
+    ("Khel Mahakumbh Trials", "Sports Events", "Selection trials for athletics, kabaddi, kho-kho, and volleyball.", "2026-07-18", "07:30 AM", "11:30 AM", "Sports Ground", "Sports Department", "6,7,8,9,10", 300, "2026-07-16", "https://images.unsplash.com/photo-1526676037777-05a232554f77?auto=format&fit=crop&w=900&q=80", "Medium", "Ongoing", True),
+    ("Navaratri Celebration", "Festival Celebrations", "Traditional garba evening with class-wise performances.", "2026-09-24", "05:30 PM", "08:30 PM", "Assembly Courtyard", "Cultural Committee", "All", 900, "2026-09-18", "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=900&q=80", "Medium", "Upcoming", True),
+    ("Teachers' Day Celebration", "Festival Celebrations", "Student-led assembly, gratitude wall, and cultural program.", "2026-09-05", "09:00 AM", "11:00 AM", "Auditorium", "Student Council", "All", 600, "2026-09-01", "https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=900&q=80", "Medium", "Upcoming", True),
+    ("Annual Day", "Cultural Events", "Annual prize distribution and cultural showcase.", "2026-12-20", "05:00 PM", "09:00 PM", "Town Hall", "School Administration", "All", 1000, "2026-12-10", "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=900&q=80", "High", "Upcoming", True),
+    ("Career Guidance Seminar", "Academic Events", "Counsellor-led session on streams, careers, and entrance pathways.", "2026-07-30", "11:00 AM", "12:30 PM", "Seminar Hall", "Counselling Cell", "9,10", 180, "2026-07-25", "https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=900&q=80", "Medium", "Upcoming", True),
+    ("Parent-Teacher Meeting", "Academic Events", "Monthly academic progress discussion with class teachers.", "2026-07-12", "09:00 AM", "12:00 PM", "Classrooms", "Academic Office", "All", 0, "2026-07-11", "https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=900&q=80", "High", "Upcoming", True),
+    ("Quiz Competition", "Competitions", "House-wise general knowledge and current affairs quiz.", "2026-06-28", "10:00 AM", "12:00 PM", "Auditorium", "Library Club", "6,7,8,9,10", 80, "2026-06-24", "https://images.unsplash.com/photo-1606326608606-aa0b62935f2b?auto=format&fit=crop&w=900&q=80", "Medium", "Completed", True),
+    ("Sports Day", "Sports Events", "Track finals, march past, and inter-house relay events.", "2026-06-15", "07:30 AM", "12:30 PM", "Main Ground", "Sports Department", "All", 700, "2026-06-08", "https://images.unsplash.com/photo-1547347298-4074fc3086f0?auto=format&fit=crop&w=900&q=80", "High", "Completed", True),
+    ("Drawing Competition", "Competitions", "Theme-based drawing event for junior and senior groups.", "2026-05-22", "09:30 AM", "11:00 AM", "Art Room", "Art Department", "5,6,7,8", 90, "2026-05-18", "https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=900&q=80", "Low", "Completed", True),
+    ("Robotics Workshop", "Academic Events", "Hands-on robotics and sensors workshop.", "2026-08-24", "10:00 AM", "03:00 PM", "Innovation Lab", "STEM Cell", "8,9,10", 45, "2026-08-18", "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=900&q=80", "High", "Upcoming", False),
 ]
 
 STUDENT_RECORDS = [
@@ -213,6 +229,33 @@ def seed_exam_records():
         added += 1
     return added
 
+def seed_event_records():
+    added = 0
+    for event_name, category, description, event_date, start_time, end_time, venue, organizer, applicable_classes, max_participants, registration_deadline, poster, priority, status, published in EVENT_RECORDS:
+        exists = Event.query.filter_by(event_name=event_name, event_date=event_date).first()
+        if exists:
+            continue
+        db.session.add(Event(
+            event_name=event_name,
+            category=category,
+            description=description,
+            event_date=event_date,
+            start_time=start_time,
+            end_time=end_time,
+            venue=venue,
+            organizer=organizer,
+            applicable_classes=applicable_classes,
+            max_participants=max_participants,
+            registration_deadline=registration_deadline,
+            poster=poster,
+            priority=priority,
+            status=status,
+            published=published,
+            created_at="2026-07-11T09:00:00",
+        ))
+        added += 1
+    return added
+
 def init_db():
     with app.app_context():
         db.create_all()
@@ -324,9 +367,10 @@ def init_db():
 
         added = seed_additional_students()
         exams_added = seed_exam_records()
+        events_added = seed_event_records()
 
         db.session.commit()
-        print(f"Database initialized successfully. Added {added} student records and {exams_added} exam records.")
+        print(f"Database initialized successfully. Added {added} student records, {exams_added} exam records, and {events_added} event records.")
 
 if __name__ == '__main__':
     init_db()

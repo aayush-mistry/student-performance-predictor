@@ -16,6 +16,7 @@ import {
   Plus,
   Search,
   Trash2,
+  Trophy,
   TrendingUp,
   UserRound,
   Users,
@@ -30,6 +31,7 @@ const navItems = [
   { path: "dashboard", label: "Dashboard", icon: TrendingUp },
   { path: "students", label: "Students", icon: Users },
   { path: "exams", label: "Exam Schedule", icon: CalendarClock },
+  { path: "events", label: "Events & Activities", icon: Trophy },
   { path: "attendance", label: "Attendance", icon: CalendarDays },
   { path: "assignments", label: "Assignments", icon: ClipboardList },
   { path: "risk", label: "Risk Analysis", icon: AlertTriangle },
@@ -39,12 +41,14 @@ export default function AdminPortal({ currentUser, onLogout }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [students, setStudents] = useState([]);
   const [examSchedule, setExamSchedule] = useState({ unitTests: [], finalExams: [], completedExams: [] });
+  const [eventsData, setEventsData] = useState({ events: [], upcomingEvents: [], completedEvents: [], stats: { totalEvents: 0, upcomingEvents: 0, ongoingEvents: 0, completedEvents: 0 } });
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchStudents();
     fetchExamSchedule();
+    fetchEvents();
   }, []);
 
   const fetchStudents = async () => {
@@ -66,6 +70,17 @@ export default function AdminPortal({ currentUser, onLogout }) {
       const res = await fetch(`${API_BASE}/admin/exams`);
       if (res.ok) {
         setExamSchedule(await res.json());
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const fetchEvents = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/admin/events`);
+      if (res.ok) {
+        setEventsData(await res.json());
       }
     } catch (e) {
       console.error(e);
@@ -120,9 +135,10 @@ export default function AdminPortal({ currentUser, onLogout }) {
         <main className="content">
           <Routes>
             <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<AdminDashboard students={students} examSchedule={examSchedule} isLoading={isLoading} />} />
+            <Route path="dashboard" element={<AdminDashboard students={students} examSchedule={examSchedule} eventsData={eventsData} isLoading={isLoading} />} />
             <Route path="students" element={<StudentsPage students={students} isLoading={isLoading} refresh={fetchStudents} />} />
             <Route path="exams" element={<ExamScheduleAdminPage schedule={examSchedule} refresh={fetchExamSchedule} />} />
+            <Route path="events" element={<EventsAdminPage eventsData={eventsData} refresh={fetchEvents} />} />
             <Route path="attendance" element={<AttendancePage students={students} isLoading={isLoading} />} />
             <Route path="assignments" element={<AssignmentsPage students={students} isLoading={isLoading} />} />
             <Route path="risk" element={<RiskPage students={students} isLoading={isLoading} />} />
@@ -134,13 +150,14 @@ export default function AdminPortal({ currentUser, onLogout }) {
   );
 }
 
-function AdminDashboard({ students, examSchedule, isLoading }) {
+function AdminDashboard({ students, examSchedule, eventsData, isLoading }) {
   const navigate = useNavigate();
   const stats = useMemo(() => getDashboardStats(students), [students]);
   const upcomingExamCount = (examSchedule.unitTests || []).length + (examSchedule.finalExams || []).filter(exam => exam.status !== "Completed").length;
   const cards = [
     { label: "Total Students", value: stats.totalStudents, icon: Users, color: "blue", to: "/admin/students" },
     { label: "Upcoming Exams", value: upcomingExamCount, icon: CalendarClock, color: "violet", to: "/admin/exams" },
+    { label: "Upcoming Events", value: eventsData.stats.upcomingEvents, icon: Trophy, color: "teal", to: "/admin/events", details: eventsData.stats },
     { label: "Avg Attendance", value: `${stats.avgAttendance}%`, icon: CalendarDays, color: "green", to: "/admin/attendance" },
     { label: "Assignments Done", value: stats.assignmentsDone, icon: ClipboardList, color: "amber", to: "/admin/assignments" },
     { label: "Students At Risk", value: stats.atRisk, icon: AlertTriangle, color: "red", to: "/admin/risk" },
@@ -170,6 +187,11 @@ function AdminDashboard({ students, examSchedule, isLoading }) {
                 <div>
                   <strong>{card.value}</strong>
                   <p>{card.label}</p>
+                  {card.details && (
+                    <span className="metric-card-breakdown">
+                      Total {card.details.totalEvents} · Ongoing {card.details.ongoingEvents} · Completed {card.details.completedEvents}
+                    </span>
+                  )}
                   <small>View Details &rarr;</small>
                 </div>
               </button>
@@ -524,6 +546,167 @@ function ExamScheduleAdminPage({ schedule, refresh }) {
       />
 
       {!allExams.length && <div className="panel loading-panel">No exam schedules have been added yet.</div>}
+    </div>
+  );
+}
+
+function EventsAdminPage({ eventsData, refresh }) {
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const controls = useEventAdminControls(eventsData.events);
+
+  const handleDelete = async (eventId) => {
+    if (confirm("Delete this event?")) {
+      await fetch(`${API_BASE}/admin/events/${eventId}`, { method: "DELETE" });
+      refresh();
+    }
+  };
+
+  const handlePublish = async (event) => {
+    await fetch(`${API_BASE}/admin/events/${event.event_id}/publish`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ published: !event.published }),
+    });
+    refresh();
+  };
+
+  const handleStatus = async (event, status) => {
+    await fetch(`${API_BASE}/admin/events/${event.event_id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    refresh();
+  };
+
+  return (
+    <div className="admin-page">
+      <PageHeader
+        eyebrow="School Calendar"
+        title="Events & Activities"
+        actions={<button className="primary-action" onClick={() => setShowForm(true)} type="button"><Plus size={16} />Add Event</button>}
+      />
+
+      {(showForm || editingEvent) && (
+        <EventForm
+          event={editingEvent}
+          onClose={() => { setShowForm(false); setEditingEvent(null); }}
+          onSave={() => { setShowForm(false); setEditingEvent(null); refresh(); }}
+        />
+      )}
+
+      <section className="summary-grid">
+        <MiniStat icon={Trophy} label="Total Events" value={eventsData.stats.totalEvents} />
+        <MiniStat icon={CalendarClock} label="Upcoming Events" value={eventsData.stats.upcomingEvents} />
+        <MiniStat icon={Eye} label="Ongoing Events" value={eventsData.stats.ongoingEvents} />
+        <MiniStat icon={CheckCircle2} label="Completed Events" value={eventsData.stats.completedEvents} />
+      </section>
+
+      <EventAdminControls controls={controls} />
+
+      <div className="panel admin-table-panel">
+        <table className="admin-table wide-table event-admin-table">
+          <thead>
+            <tr>
+              <th>Event</th>
+              <th>Category</th>
+              <th>Date</th>
+              <th>Venue</th>
+              <th>Classes</th>
+              <th>Participants</th>
+              <th>Status</th>
+              <th>Published</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {controls.events.map(event => (
+              <tr key={event.event_id}>
+                <td><strong>{event.event_name}</strong><span>{event.organizer}</span></td>
+                <td>{event.category}</td>
+                <td>{formatDisplayDate(event.event_date)}<span>{event.start_time} - {event.end_time}</span></td>
+                <td>{event.venue}</td>
+                <td>{event.applicable_classes === "All" ? "All" : `Class ${event.applicable_classes}`}</td>
+                <td>{event.max_participants || "Open"}</td>
+                <td><StatusBadge status={event.status} /></td>
+                <td><StatusBadge status={event.published ? "Published" : "Draft"} /></td>
+                <td>
+                  <div className="table-actions">
+                    <button aria-label={`Edit ${event.event_name}`} onClick={() => setEditingEvent(event)}><Edit size={18} /></button>
+                    <button aria-label={`Publish ${event.event_name}`} onClick={() => handlePublish(event)}><Eye size={18} /></button>
+                    <button aria-label={`Complete ${event.event_name}`} onClick={() => handleStatus(event, event.status === "Completed" ? "Upcoming" : "Completed")}><CheckCircle2 size={18} /></button>
+                    <button aria-label={`Delete ${event.event_name}`} className="danger" onClick={() => handleDelete(event.event_id)}><Trash2 size={18} /></button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {!controls.events.length && <EmptyRow columns={9} message="No event records found." />}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function EventAdminControls({ controls }) {
+  return (
+    <div className="panel admin-controls event-admin-controls">
+      <label className="search-control">
+        <Search size={18} />
+        <input value={controls.search} onChange={(e) => controls.setSearch(e.target.value)} placeholder="Search by event, category, or venue" />
+      </label>
+      <CustomSelect icon={Filter} options={[{ label: "All Categories", value: "" }, ...controls.categories.map(item => ({ label: item, value: item }))]} value={controls.category} onChange={controls.setCategory} />
+      <CustomSelect icon={Filter} options={[{ label: "All Months", value: "" }, ...controls.months.map(item => ({ label: item, value: item }))]} value={controls.month} onChange={controls.setMonth} />
+      <CustomSelect icon={Filter} options={[{ label: "All Classes", value: "" }, ...controls.classes.map(item => ({ label: `Class ${item}`, value: item }))]} value={controls.classFilter} onChange={controls.setClassFilter} />
+      <CustomSelect icon={Filter} options={[{ label: "All Statuses", value: "" }, ...["Upcoming", "Ongoing", "Completed", "Cancelled"].map(item => ({ label: item, value: item }))]} value={controls.status} onChange={controls.setStatus} />
+    </div>
+  );
+}
+
+function EventForm({ event, onClose, onSave }) {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const data = Object.fromEntries(fd.entries());
+    data.max_participants = Number(data.max_participants || 0);
+    data.published = fd.get("published") === "on";
+    const method = event ? "PUT" : "POST";
+    const url = event ? `${API_BASE}/admin/events/${event.event_id}` : `${API_BASE}/admin/events`;
+    await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    onSave();
+  };
+
+  return (
+    <div className="modal-backdrop">
+      <div className="panel admin-modal event-form-modal">
+        <div className="modal-title-row">
+          <h3>{event ? "Edit Event" : "Add Event"}</h3>
+          <button onClick={onClose} aria-label="Close event form"><X size={20} /></button>
+        </div>
+        <form className="admin-form" onSubmit={handleSubmit}>
+          <label>Event Name<input name="event_name" defaultValue={event?.event_name} required /></label>
+          <label>Category<input name="category" defaultValue={event?.category || "Competitions"} required /></label>
+          <label>Description<input name="description" defaultValue={event?.description} /></label>
+          <label>Date<input name="event_date" type="date" defaultValue={event?.event_date} required /></label>
+          <label>Start Time<input name="start_time" defaultValue={event?.start_time || "09:00 AM"} required /></label>
+          <label>End Time<input name="end_time" defaultValue={event?.end_time || "11:00 AM"} required /></label>
+          <label>Venue<input name="venue" defaultValue={event?.venue} required /></label>
+          <label>Organizer<input name="organizer" defaultValue={event?.organizer} required /></label>
+          <label>Applicable Classes<input name="applicable_classes" defaultValue={event?.applicable_classes || "All"} placeholder="All or 8,9,10" /></label>
+          <label>Maximum Participants<input name="max_participants" type="number" defaultValue={event?.max_participants || 0} /></label>
+          <label>Registration Deadline<input name="registration_deadline" type="date" defaultValue={event?.registration_deadline} /></label>
+          <label>Event Poster<input name="poster" defaultValue={event?.poster} placeholder="Poster URL or uploaded file path" /></label>
+          <label>Priority<input name="priority" defaultValue={event?.priority || "Medium"} /></label>
+          <label>Status<input name="status" defaultValue={event?.status || "Upcoming"} /></label>
+          <label className="checkbox-row"><input name="published" type="checkbox" defaultChecked={event?.published ?? true} />Published</label>
+          <button className="primary-action full-width" type="submit">Save Event</button>
+        </form>
+      </div>
     </div>
   );
 }
@@ -906,6 +1089,45 @@ function useStudentControls(students, defaultSort) {
   };
 }
 
+function useEventAdminControls(events) {
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("");
+  const [month, setMonth] = useState("");
+  const [classFilter, setClassFilter] = useState("");
+  const [status, setStatus] = useState("");
+
+  const categories = useMemo(() => unique(events.map(event => event.category).filter(Boolean)), [events]);
+  const months = useMemo(() => unique(events.map(event => getMonthLabel(event.event_date)).filter(Boolean)), [events]);
+  const classes = useMemo(() => unique(events.flatMap(event => parseClasses(event.applicable_classes))), [events]);
+  const filteredEvents = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return events
+      .filter(event => !query || [event.event_name, event.category, event.venue].some(value => String(value || "").toLowerCase().includes(query)))
+      .filter(event => !category || event.category === category)
+      .filter(event => !month || getMonthLabel(event.event_date) === month)
+      .filter(event => !classFilter || event.applicable_classes === "All" || parseClasses(event.applicable_classes).includes(classFilter))
+      .filter(event => !status || event.status === status)
+      .sort((a, b) => new Date(`${a.event_date}T00:00:00`) - new Date(`${b.event_date}T00:00:00`));
+  }, [events, search, category, month, classFilter, status]);
+
+  return {
+    search,
+    setSearch,
+    category,
+    setCategory,
+    month,
+    setMonth,
+    classFilter,
+    setClassFilter,
+    status,
+    setStatus,
+    categories,
+    months,
+    classes,
+    events: filteredEvents,
+  };
+}
+
 function getDashboardStats(students) {
   const totalStudents = students.length;
   const avgAttendance = totalStudents ? Math.round(students.reduce((sum, s) => sum + s.attendancePercentage, 0) / totalStudents) : 0;
@@ -949,6 +1171,15 @@ function getAssignmentCompletion(student) {
 
 function unique(values) {
   return [...new Set(values)].sort();
+}
+
+function parseClasses(value) {
+  if (!value || value === "All") return [];
+  return String(value).split(",").map(item => item.trim()).filter(Boolean);
+}
+
+function getMonthLabel(date) {
+  return new Date(`${date}T00:00:00`).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
 }
 
 function labelize(value) {
@@ -1007,6 +1238,7 @@ function EmptyRow({ columns, message = "No matching records found." }) {
 }
 
 function formatDisplayDate(date) {
+  if (!date) return "-";
   return new Date(`${date}T00:00:00`).toLocaleDateString("en-IN", {
     day: "2-digit",
     month: "short",

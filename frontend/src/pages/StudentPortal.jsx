@@ -13,7 +13,9 @@ import {
   Mail,
   Menu,
   Phone,
+  Search,
   Timer,
+  Trophy,
   TrendingUp,
   X,
 } from "lucide-react";
@@ -97,6 +99,7 @@ const fallbackPrediction = {
 const tabs = [
   { id: "activity", label: "Study Activity", icon: Timer },
   { id: "examSchedule", label: "Exam Schedule", icon: CalendarClock },
+  { id: "events", label: "Events & Activities", icon: Trophy },
   { id: "marks", label: "Previous Marks", icon: BookOpen },
   { id: "attendance", label: "Attendance", icon: CalendarDays },
   { id: "assignments", label: "Assignments", icon: ClipboardList },
@@ -121,6 +124,21 @@ const fallbackExamSchedule = {
     { exam_id: 13, subject: "English", date: "2026-06-18", exam_type: "Mid Term", result_status: "Awaiting Result", marks_available: false, maximum_marks: 20 },
   ],
 };
+
+const fallbackEvents = {
+  events: [
+    { event_id: 1, event_name: "Independence Day Celebration", category: "National Celebrations", description: "Flag hoisting, patriotic performances, and student speeches.", event_date: "2026-08-15", start_time: "08:00 AM", end_time: "10:30 AM", venue: "Main Ground", organizer: "Social Science Department", applicable_classes: "All", max_participants: 800, registration_deadline: "2026-08-10", poster: "https://images.unsplash.com/photo-1532375810709-75b1da00537c?auto=format&fit=crop&w=900&q=80", priority: "High", status: "Upcoming", published: true },
+    { event_id: 2, event_name: "Science Fair", category: "Competitions", description: "Model exhibition and science demonstrations for class teams.", event_date: "2026-07-26", start_time: "09:30 AM", end_time: "02:00 PM", venue: "Science Block", organizer: "Science Club", applicable_classes: "8,9,10", max_participants: 120, registration_deadline: "2026-07-20", poster: "https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=900&q=80", priority: "High", status: "Upcoming", published: true },
+    { event_id: 4, event_name: "Khel Mahakumbh Trials", category: "Sports Events", description: "Selection trials for athletics, kabaddi, kho-kho, and volleyball.", event_date: "2026-07-18", start_time: "07:30 AM", end_time: "11:30 AM", venue: "Sports Ground", organizer: "Sports Department", applicable_classes: "6,7,8,9,10", max_participants: 300, registration_deadline: "2026-07-16", poster: "https://images.unsplash.com/photo-1526676037777-05a232554f77?auto=format&fit=crop&w=900&q=80", priority: "Medium", status: "Ongoing", published: true },
+    { event_id: 10, event_name: "Quiz Competition", category: "Competitions", description: "House-wise general knowledge and current affairs quiz.", event_date: "2026-06-28", start_time: "10:00 AM", end_time: "12:00 PM", venue: "Auditorium", organizer: "Library Club", applicable_classes: "6,7,8,9,10", max_participants: 80, registration_deadline: "2026-06-24", poster: "https://images.unsplash.com/photo-1606326608606-aa0b62935f2b?auto=format&fit=crop&w=900&q=80", priority: "Medium", status: "Completed", published: true },
+  ],
+  upcomingEvents: [],
+  completedEvents: [],
+  stats: { totalEvents: 4, upcomingEvents: 2, ongoingEvents: 1, completedEvents: 1 },
+};
+
+fallbackEvents.upcomingEvents = fallbackEvents.events.filter(event => ["Upcoming", "Ongoing"].includes(event.status));
+fallbackEvents.completedEvents = fallbackEvents.events.filter(event => event.status === "Completed");
 
 function useStudentData(studentId) {
   const [student, setStudent] = useState(fallbackStudent);
@@ -171,9 +189,29 @@ function useExamSchedule() {
   return schedule;
 }
 
+function useEvents() {
+  const [eventsData, setEventsData] = useState(fallbackEvents);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const response = await fetch(`${API_BASE}/events`);
+        if (!response.ok) throw new Error("Events unavailable");
+        setEventsData(await response.json());
+      } catch {
+        setEventsData(fallbackEvents);
+      }
+    }
+    load();
+  }, []);
+
+  return eventsData;
+}
+
 export default function StudentPortal({ currentUser, onLogout }) {
   const { student, prediction, apiStatus } = useStudentData(currentUser?.studentId);
   const examSchedule = useExamSchedule();
+  const eventsData = useEvents();
   const [activeTab, setActiveTab] = useState("activity");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
@@ -186,6 +224,7 @@ export default function StudentPortal({ currentUser, onLogout }) {
   const page = {
     activity: <Activity student={student} />,
     examSchedule: <ExamSchedule schedule={examSchedule} />,
+    events: <EventsActivities eventsData={eventsData} student={student} />,
     marks: <PreviousMarks exams={student.previousExams} />,
     attendance: <Attendance attendance={student.attendance} />,
     assignments: <Assignments assignments={student.assignments} />,
@@ -617,6 +656,166 @@ function ExamSchedule({ schedule }) {
   );
 }
 
+function EventsActivities({ eventsData, student }) {
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [registeredIds, setRegisteredIds] = useState([]);
+  const controls = useEventControls(eventsData.events, student?.current_class);
+  const upcoming = controls.events.filter(event => ["Upcoming", "Ongoing"].includes(event.status));
+  const completed = controls.events.filter(event => event.status === "Completed");
+
+  const handleRegister = (event) => {
+    if (!registeredIds.includes(event.event_id)) {
+      setRegisteredIds([...registeredIds, event.event_id]);
+    }
+  };
+
+  return (
+    <section className="events-module">
+      <div className="panel event-hero-panel">
+        <div>
+          <span className="event-eyebrow">Events & Activities</span>
+          <h2>School calendar, competitions, celebrations, and activity updates</h2>
+        </div>
+        <div className="event-stat-strip">
+          <Metric label="Total Events" value={eventsData.stats.totalEvents} />
+          <Metric label="Upcoming" value={eventsData.stats.upcomingEvents} />
+          <Metric label="Ongoing" value={eventsData.stats.ongoingEvents} />
+          <Metric label="Completed" value={eventsData.stats.completedEvents} />
+        </div>
+      </div>
+
+      <EventFilters controls={controls} />
+
+      <EventSection title="Upcoming Events" events={upcoming} onView={setSelectedEvent} onRegister={handleRegister} registeredIds={registeredIds} />
+      <EventSection title="Completed Events" events={completed} onView={setSelectedEvent} onRegister={handleRegister} registeredIds={registeredIds} />
+
+      {selectedEvent && (
+        <EventDetailsModal
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          onRegister={handleRegister}
+          isRegistered={registeredIds.includes(selectedEvent.event_id)}
+        />
+      )}
+    </section>
+  );
+}
+
+function EventFilters({ controls }) {
+  return (
+    <div className="panel event-filters">
+      <label className="search-control">
+        <Search size={18} />
+        <input value={controls.search} onChange={(e) => controls.setSearch(e.target.value)} placeholder="Search events, category, or venue" />
+      </label>
+      <select value={controls.category} onChange={(e) => controls.setCategory(e.target.value)}>
+        <option value="">All Categories</option>
+        {controls.categories.map(category => <option value={category} key={category}>{category}</option>)}
+      </select>
+      <select value={controls.month} onChange={(e) => controls.setMonth(e.target.value)}>
+        <option value="">All Months</option>
+        {controls.months.map(month => <option value={month} key={month}>{month}</option>)}
+      </select>
+      <select value={controls.classFilter} onChange={(e) => controls.setClassFilter(e.target.value)}>
+        <option value="">All Classes</option>
+        {controls.classes.map(item => <option value={item} key={item}>Class {item}</option>)}
+      </select>
+      <select value={controls.status} onChange={(e) => controls.setStatus(e.target.value)}>
+        <option value="">All Statuses</option>
+        {["Upcoming", "Ongoing", "Completed", "Cancelled"].map(status => <option value={status} key={status}>{status}</option>)}
+      </select>
+    </div>
+  );
+}
+
+function EventSection({ title, events, onView, onRegister, registeredIds }) {
+  return (
+    <div className="event-section">
+      <div className="event-section-title">
+        <h2>{title}</h2>
+        <span>{events.length} events</span>
+      </div>
+      <div className="event-card-grid">
+        {events.map(event => (
+          <EventCard
+            event={event}
+            key={event.event_id}
+            onView={onView}
+            onRegister={onRegister}
+            isRegistered={registeredIds.includes(event.event_id)}
+          />
+        ))}
+        {!events.length && <div className="panel loading-panel">No matching events found.</div>}
+      </div>
+    </div>
+  );
+}
+
+function EventCard({ event, onView, onRegister, isRegistered }) {
+  const isCompetition = event.category === "Competitions";
+  return (
+    <article className="event-card">
+      <img src={event.poster} alt={`${event.event_name} poster`} />
+      <div className="event-card-body">
+        <div className="event-card-top">
+          <StatusBadge status={event.status} />
+          <span className={`priority-badge ${String(event.priority).toLowerCase()}`}>{event.priority}</span>
+        </div>
+        <h3>{event.event_name}</h3>
+        <p>{event.description}</p>
+        <div className="event-meta-grid">
+          <span>{formatDisplayDate(event.event_date)}</span>
+          <span>{event.start_time} - {event.end_time}</span>
+          <span>{event.venue}</span>
+          <CountdownBadge date={event.event_date} />
+        </div>
+        <div className="event-actions">
+          <button className="secondary-action compact-action" onClick={() => onView(event)} type="button">
+            <Eye size={16} />
+            Details
+          </button>
+          {isCompetition && event.status === "Upcoming" && (
+            <button className="primary-action compact-action" onClick={() => onRegister(event)} type="button">
+              {isRegistered ? "Registered" : "Register"}
+            </button>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function EventDetailsModal({ event, onClose, onRegister, isRegistered }) {
+  const isCompetition = event.category === "Competitions";
+  return (
+    <div className="modal-backdrop">
+      <div className="panel event-modal">
+        <div className="modal-title-row">
+          <h3>{event.event_name}</h3>
+          <button onClick={onClose} aria-label="Close event details"><X size={20} /></button>
+        </div>
+        <img className="event-modal-poster" src={event.poster} alt={`${event.event_name} poster`} />
+        <p className="event-description">{event.description}</p>
+        <div className="metric-stack">
+          <Metric label="Category" value={event.category} />
+          <Metric label="Date" value={formatDisplayDate(event.event_date)} />
+          <Metric label="Time" value={`${event.start_time} - ${event.end_time}`} />
+          <Metric label="Venue" value={event.venue} />
+          <Metric label="Organizer" value={event.organizer} />
+          <Metric label="Eligibility" value={event.applicable_classes === "All" ? "All students" : `Classes ${event.applicable_classes}`} />
+          <Metric label="Max Participants" value={event.max_participants || "Open"} />
+          <Metric label="Deadline" value={formatDisplayDate(event.registration_deadline)} />
+        </div>
+        {isCompetition && event.status === "Upcoming" && (
+          <button className="primary-action full-width" onClick={() => onRegister(event)} type="button">
+            {isRegistered ? "Registered" : "Register for Competition"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function PanelTitle({ icon: Icon, title }) {
   return (
     <div className="panel-title">
@@ -672,7 +871,61 @@ function countStatuses(days) {
   }));
 }
 
+function useEventControls(events, studentClass) {
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("");
+  const [month, setMonth] = useState("");
+  const [classFilter, setClassFilter] = useState("");
+  const [status, setStatus] = useState("");
+
+  const categories = useMemo(() => uniqueValues(events.map(event => event.category)), [events]);
+  const months = useMemo(() => uniqueValues(events.map(event => getMonthLabel(event.event_date))), [events]);
+  const classes = useMemo(() => uniqueValues(events.flatMap(event => parseClasses(event.applicable_classes))), [events]);
+  const effectiveClass = classFilter || studentClass || "";
+  const filteredEvents = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return events
+      .filter(event => !query || [event.event_name, event.category, event.venue].some(value => String(value || "").toLowerCase().includes(query)))
+      .filter(event => !category || event.category === category)
+      .filter(event => !month || getMonthLabel(event.event_date) === month)
+      .filter(event => !status || event.status === status)
+      .filter(event => !effectiveClass || event.applicable_classes === "All" || parseClasses(event.applicable_classes).includes(String(effectiveClass)))
+      .sort((a, b) => new Date(`${a.event_date}T00:00:00`) - new Date(`${b.event_date}T00:00:00`));
+  }, [events, search, category, month, status, effectiveClass]);
+
+  return {
+    search,
+    setSearch,
+    category,
+    setCategory,
+    month,
+    setMonth,
+    classFilter,
+    setClassFilter,
+    status,
+    setStatus,
+    categories,
+    months,
+    classes,
+    events: filteredEvents,
+  };
+}
+
+function uniqueValues(values) {
+  return [...new Set(values.filter(Boolean))].sort();
+}
+
+function parseClasses(value) {
+  if (!value || value === "All") return [];
+  return String(value).split(",").map(item => item.trim()).filter(Boolean);
+}
+
+function getMonthLabel(date) {
+  return new Date(`${date}T00:00:00`).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+}
+
 function formatDisplayDate(date) {
+  if (!date) return "-";
   return new Date(`${date}T00:00:00`).toLocaleDateString("en-IN", {
     day: "2-digit",
     month: "short",

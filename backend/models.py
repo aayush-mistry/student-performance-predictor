@@ -80,6 +80,25 @@ class Exam(db.Model):
     status = db.Column(db.String(30), nullable=False, default="Draft")
     result_published = db.Column(db.Boolean, default=False)
 
+class Event(db.Model):
+    event_id = db.Column(db.Integer, primary_key=True)
+    event_name = db.Column(db.String(140), nullable=False)
+    category = db.Column(db.String(80), nullable=False)
+    description = db.Column(db.Text)
+    event_date = db.Column(db.String(20), nullable=False)
+    start_time = db.Column(db.String(20), nullable=False)
+    end_time = db.Column(db.String(20), nullable=False)
+    venue = db.Column(db.String(120), nullable=False)
+    organizer = db.Column(db.String(120), nullable=False)
+    applicable_classes = db.Column(db.String(120), default="All")
+    max_participants = db.Column(db.Integer, default=0)
+    registration_deadline = db.Column(db.String(20))
+    poster = db.Column(db.Text)
+    priority = db.Column(db.String(20), default="Medium")
+    status = db.Column(db.String(30), nullable=False, default="Upcoming")
+    published = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.String(30))
+
 class Attendance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)

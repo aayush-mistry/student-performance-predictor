@@ -1,12 +1,13 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from statistics import mean
+from datetime import datetime
 import json
 import os
 
 from sqlalchemy import func
 
-from models import db, User, Student, StudyHours, Activity, ExamMark, Attendance, Assignment, Prediction, Exam
+from models import db, User, Student, StudyHours, Activity, ExamMark, Attendance, Assignment, Prediction, Exam, Event
 
 app = Flask(__name__)
 CORS(app)
@@ -232,6 +233,74 @@ def get_exam_groups():
     completed = [add_exam_result_state(exam) for exam in exams if exam["status"] == "Completed"]
     return {"unitTests": upcoming, "finalExams": finals, "completedExams": completed}
 
+def serialize_event(event):
+    return {
+        "event_id": event.event_id,
+        "event_name": event.event_name,
+        "category": event.category,
+        "description": event.description,
+        "event_date": event.event_date,
+        "start_time": event.start_time,
+        "end_time": event.end_time,
+        "venue": event.venue,
+        "organizer": event.organizer,
+        "applicable_classes": event.applicable_classes,
+        "max_participants": event.max_participants,
+        "registration_deadline": event.registration_deadline,
+        "poster": event.poster,
+        "priority": event.priority,
+        "status": event.status,
+        "published": event.published,
+        "created_at": event.created_at,
+    }
+
+def get_event_payload(data, event=None):
+    payload = {
+        "event_name": data.get("event_name", event.event_name if event else None),
+        "category": data.get("category", event.category if event else None),
+        "description": data.get("description", event.description if event else ""),
+        "event_date": data.get("event_date", event.event_date if event else None),
+        "start_time": data.get("start_time", event.start_time if event else None),
+        "end_time": data.get("end_time", event.end_time if event else None),
+        "venue": data.get("venue", event.venue if event else None),
+        "organizer": data.get("organizer", event.organizer if event else None),
+        "applicable_classes": data.get("applicable_classes", event.applicable_classes if event else "All"),
+        "max_participants": data.get("max_participants", event.max_participants if event else 0),
+        "registration_deadline": data.get("registration_deadline", event.registration_deadline if event else None),
+        "poster": data.get("poster", event.poster if event else ""),
+        "priority": data.get("priority", event.priority if event else "Medium"),
+        "status": data.get("status", event.status if event else "Upcoming"),
+        "published": data.get("published", event.published if event else True),
+        "created_at": event.created_at if event else datetime.now().isoformat(timespec="seconds"),
+    }
+    required = ["event_name", "category", "event_date", "start_time", "end_time", "venue", "organizer"]
+    missing = [field for field in required if payload.get(field) in (None, "")]
+    if missing:
+        return None, missing
+    payload["max_participants"] = int(payload["max_participants"] or 0)
+    payload["published"] = bool(payload["published"])
+    return payload, []
+
+def query_events(include_unpublished=False):
+    query = Event.query
+    if not include_unpublished:
+        query = query.filter_by(published=True)
+    return query.order_by(Event.event_date.asc(), Event.start_time.asc()).all()
+
+def get_event_groups(include_unpublished=False):
+    events = [serialize_event(event) for event in query_events(include_unpublished)]
+    return {
+        "events": events,
+        "upcomingEvents": [event for event in events if event["status"] in ("Upcoming", "Ongoing")],
+        "completedEvents": [event for event in events if event["status"] == "Completed"],
+        "stats": {
+            "totalEvents": len(events),
+            "upcomingEvents": len([event for event in events if event["status"] == "Upcoming"]),
+            "ongoingEvents": len([event for event in events if event["status"] == "Ongoing"]),
+            "completedEvents": len([event for event in events if event["status"] == "Completed"]),
+        },
+    }
+
 # ----------------- AUTH -----------------
 
 @app.post("/api/admin/login")
@@ -449,6 +518,77 @@ def delete_exam(exam_id):
     if not exam:
         return jsonify({"message": "Not found"}), 404
     db.session.delete(exam)
+    db.session.commit()
+    return jsonify({"success": True})
+
+
+# ----------------- EVENTS AND ACTIVITIES ENDPOINTS -----------------
+
+@app.get("/api/events")
+def get_events():
+    return jsonify(get_event_groups())
+
+@app.get("/api/events/upcoming")
+def get_upcoming_events():
+    return jsonify(get_event_groups()["upcomingEvents"])
+
+@app.get("/api/events/completed")
+def get_completed_events():
+    return jsonify(get_event_groups()["completedEvents"])
+
+@app.get("/api/admin/events")
+def admin_events():
+    return jsonify(get_event_groups(include_unpublished=True))
+
+@app.post("/api/admin/events")
+def create_event():
+    payload, missing = get_event_payload(request.json or {})
+    if missing:
+        return jsonify({"message": f"Missing fields: {', '.join(missing)}"}), 400
+    event = Event(**payload)
+    db.session.add(event)
+    db.session.commit()
+    return jsonify(serialize_event(event)), 201
+
+@app.put("/api/admin/events/<int:event_id>")
+def update_event(event_id):
+    event = Event.query.get(event_id)
+    if not event:
+        return jsonify({"message": "Not found"}), 404
+    payload, missing = get_event_payload(request.json or {}, event)
+    if missing:
+        return jsonify({"message": f"Missing fields: {', '.join(missing)}"}), 400
+    for field, value in payload.items():
+        setattr(event, field, value)
+    db.session.commit()
+    return jsonify(serialize_event(event))
+
+@app.patch("/api/admin/events/<int:event_id>/publish")
+def update_event_publish_status(event_id):
+    event = Event.query.get(event_id)
+    if not event:
+        return jsonify({"message": "Not found"}), 404
+    data = request.json or {}
+    event.published = bool(data.get("published", not event.published))
+    db.session.commit()
+    return jsonify(serialize_event(event))
+
+@app.patch("/api/admin/events/<int:event_id>/status")
+def update_event_status(event_id):
+    event = Event.query.get(event_id)
+    if not event:
+        return jsonify({"message": "Not found"}), 404
+    data = request.json or {}
+    event.status = data.get("status", event.status)
+    db.session.commit()
+    return jsonify(serialize_event(event))
+
+@app.delete("/api/admin/events/<int:event_id>")
+def delete_event(event_id):
+    event = Event.query.get(event_id)
+    if not event:
+        return jsonify({"message": "Not found"}), 404
+    db.session.delete(event)
     db.session.commit()
     return jsonify({"success": True})
 
