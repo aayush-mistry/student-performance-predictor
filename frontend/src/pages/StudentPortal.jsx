@@ -26,6 +26,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  Label,
   Legend,
   Line,
   LineChart as ReLineChart,
@@ -415,7 +416,14 @@ function PreviousMarks({ exams }) {
 
 function Attendance({ attendance }) {
   const days = attendance.length ? attendance : buildFallbackAttendance();
-  const counts = countStatuses(days);
+  const attendanceDays = days.filter((day) => day.status !== "holiday");
+  const presentCount = attendanceDays.filter((day) => day.status === "present").length;
+  const totalDays = Math.max(attendanceDays.length, 1);
+  const attendanceRate = Math.round((presentCount / totalDays) * 100);
+  const pieData = [
+    { name: "Attendance", value: attendanceRate, color: "#22c55e" },
+    { name: "Remaining", value: Math.max(100 - attendanceRate, 0), color: "#e2e8f0" },
+  ];
 
   return (
     <section className="panel-grid">
@@ -442,11 +450,26 @@ function Attendance({ attendance }) {
         <div className="chart pie">
           <ResponsiveContainer>
             <PieChart>
-              <Pie data={counts} dataKey="value" nameKey="name" innerRadius={58} outerRadius={86} paddingAngle={4}>
-                {counts.map((item) => <Cell key={item.name} fill={item.color} />)}
+              <Pie
+                data={pieData}
+                dataKey="value"
+                nameKey="name"
+                innerRadius={52}
+                outerRadius={74}
+                paddingAngle={3}
+                startAngle={90}
+                endAngle={-270}
+                stroke="#ffffff"
+                strokeWidth={3}
+              >
+                {pieData.map((item) => <Cell key={item.name} fill={item.color} />)}
+                <Label
+                  value={`${attendanceRate}%`}
+                  position="center"
+                  style={{ fill: "#0f172a", fontSize: "16px", fontWeight: 700 }}
+                />
               </Pie>
               <Tooltip />
-              <Legend />
             </PieChart>
           </ResponsiveContainer>
         </div>

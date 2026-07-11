@@ -367,7 +367,17 @@ textarea {
 }
 
 .chart.pie {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   height: 330px;
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+.chart.pie .recharts-responsive-container {
+  width: 100% !important;
+  max-width: 260px;
 }
 
 .marks-table {
