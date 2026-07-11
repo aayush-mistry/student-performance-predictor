@@ -129,7 +129,7 @@ const fallbackEvents = {
   events: [
     { event_id: 1, event_name: "Independence Day Celebration", category: "National Celebrations", description: "Flag hoisting, patriotic performances, and student speeches.", event_date: "2026-08-15", start_time: "08:00 AM", end_time: "10:30 AM", venue: "Main Ground", organizer: "Social Science Department", applicable_classes: "All", max_participants: 800, registration_deadline: "2026-08-10", poster: "https://images.unsplash.com/photo-1532375810709-75b1da00537c?auto=format&fit=crop&w=900&q=80", priority: "High", status: "Upcoming", published: true },
     { event_id: 2, event_name: "Science Fair", category: "Competitions", description: "Model exhibition and science demonstrations for class teams.", event_date: "2026-07-26", start_time: "09:30 AM", end_time: "02:00 PM", venue: "Science Block", organizer: "Science Club", applicable_classes: "8,9,10", max_participants: 120, registration_deadline: "2026-07-20", poster: "https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=900&q=80", priority: "High", status: "Upcoming", published: true },
-    { event_id: 4, event_name: "Khel Mahakumbh Trials", category: "Sports Events", description: "Selection trials for athletics, kabaddi, kho-kho, and volleyball.", event_date: "2026-07-18", start_time: "07:30 AM", end_time: "11:30 AM", venue: "Sports Ground", organizer: "Sports Department", applicable_classes: "6,7,8,9,10", max_participants: 300, registration_deadline: "2026-07-16", poster: "https://images.unsplash.com/photo-1526676037777-05a232554f77?auto=format&fit=crop&w=900&q=80", priority: "Medium", status: "Ongoing", published: true },
+    { event_id: 4, event_name: "Khel Mahakumbh Trials", category: "Sports Events", description: "Selection trials for athletics, kabaddi, kho-kho, and volleyball.", event_date: "2026-07-18", start_time: "07:30 AM", end_time: "11:30 AM", venue: "Sports Ground", organizer: "Sports Department", applicable_classes: "6,7,8,9,10", max_participants: 300, registration_deadline: "2026-07-16", poster: "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=900&q=80", priority: "Medium", status: "Ongoing", published: true },
     { event_id: 10, event_name: "Quiz Competition", category: "Competitions", description: "House-wise general knowledge and current affairs quiz.", event_date: "2026-06-28", start_time: "10:00 AM", end_time: "12:00 PM", venue: "Auditorium", organizer: "Library Club", applicable_classes: "6,7,8,9,10", max_participants: 80, registration_deadline: "2026-06-24", poster: "https://images.unsplash.com/photo-1606326608606-aa0b62935f2b?auto=format&fit=crop&w=900&q=80", priority: "Medium", status: "Completed", published: true },
   ],
   upcomingEvents: [],
@@ -139,6 +139,45 @@ const fallbackEvents = {
 
 fallbackEvents.upcomingEvents = fallbackEvents.events.filter(event => ["Upcoming", "Ongoing"].includes(event.status));
 fallbackEvents.completedEvents = fallbackEvents.events.filter(event => event.status === "Completed");
+
+const eventCategories = [
+  {
+    title: "Festival Celebrations",
+    icon: "🪔",
+    description: "Diwali, Navratri, Holi, Uttarayan, and joyful festival gatherings.",
+    image: "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    title: "National Celebrations",
+    icon: "🇮🇳",
+    description: "Flag ceremonies, parades, assemblies, and national observances.",
+    image: "https://images.unsplash.com/photo-1532375810709-75b1da00537c?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    title: "Competitions",
+    icon: "🏆",
+    description: "Quiz, debate, coding, robotics, science fair, and inter-school contests.",
+    image: "https://images.unsplash.com/photo-1567427017947-545c5f8d16ad?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    title: "Sports Events",
+    icon: "⚽",
+    description: "Sports day, cricket, football, athletics, kabaddi, and team tournaments.",
+    image: "https://images.unsplash.com/photo-1547347298-4074fc3086f0?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    title: "Cultural Events",
+    icon: "🎭",
+    description: "Annual day, music, dance, drama, talent shows, and stage performances.",
+    image: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    title: "Academic Events",
+    icon: "📚",
+    description: "Workshops, seminars, exams, guest lectures, and academic meetings.",
+    image: "https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=1200&q=80",
+  },
+];
 
 function useStudentData(studentId) {
   const [student, setStudent] = useState(fallbackStudent);
@@ -657,11 +696,11 @@ function ExamSchedule({ schedule }) {
 }
 
 function EventsActivities({ eventsData, student }) {
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [registeredIds, setRegisteredIds] = useState([]);
-  const controls = useEventControls(eventsData.events, student?.current_class);
-  const upcoming = controls.events.filter(event => ["Upcoming", "Ongoing"].includes(event.status));
-  const completed = controls.events.filter(event => event.status === "Completed");
+  const categoryEvents = selectedCategory ? eventsData.events.filter(event => event.category === selectedCategory.title) : [];
+  const controls = useEventControls(categoryEvents, student?.current_class);
 
   const handleRegister = (event) => {
     if (!registeredIds.includes(event.event_id)) {
@@ -669,12 +708,39 @@ function EventsActivities({ eventsData, student }) {
     }
   };
 
+  if (selectedEvent) {
+    return (
+      <EventDetailPage
+        event={selectedEvent}
+        events={eventsData.events}
+        onBack={() => setSelectedEvent(null)}
+        onSelectEvent={setSelectedEvent}
+        onRegister={handleRegister}
+        isRegistered={registeredIds.includes(selectedEvent.event_id)}
+      />
+    );
+  }
+
+  if (selectedCategory) {
+    return (
+      <EventCategoryPage
+        category={selectedCategory}
+        controls={controls}
+        onBack={() => setSelectedCategory(null)}
+        onView={setSelectedEvent}
+        onRegister={handleRegister}
+        registeredIds={registeredIds}
+      />
+    );
+  }
+
   return (
     <section className="events-module">
-      <div className="panel event-hero-panel">
+      <div className="event-discovery-hero">
         <div>
           <span className="event-eyebrow">Events & Activities</span>
-          <h2>School calendar, competitions, celebrations, and activity updates</h2>
+          <h2>Discover celebrations, competitions, sports, culture, and academic moments.</h2>
+          <p>Browse by category, then open a focused event page with dates, venue, eligibility, registration details, and related events.</p>
         </div>
         <div className="event-stat-strip">
           <Metric label="Total Events" value={eventsData.stats.totalEvents} />
@@ -684,19 +750,60 @@ function EventsActivities({ eventsData, student }) {
         </div>
       </div>
 
+      <CategoryCardGrid events={eventsData.events} onSelect={setSelectedCategory} />
+    </section>
+  );
+}
+
+function CategoryCardGrid({ events, onSelect }) {
+  return (
+    <div className="event-category-grid">
+      {eventCategories.map(category => {
+        const count = events.filter(event => event.category === category.title).length;
+        return (
+          <button className="event-category-card" key={category.title} onClick={() => onSelect(category)} type="button">
+            <img src={category.image} alt={`${category.title} banner`} />
+            <span className="category-overlay" />
+            <span className="category-icon">{category.icon}</span>
+            <span className="category-count">{count} events</span>
+            <span className="category-content">
+              <strong>{category.title}</strong>
+              <small>{category.description}</small>
+              <em>View Events →</em>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function EventCategoryPage({ category, controls, onBack, onView, onRegister, registeredIds }) {
+  return (
+    <section className="events-module">
+      <div className="event-category-hero">
+        <img src={category.image} alt={`${category.title} banner`} />
+        <span className="category-overlay" />
+        <div>
+          <button className="event-back-button" onClick={onBack} type="button">← Categories</button>
+          <span className="category-icon large">{category.icon}</span>
+          <h2>{category.title}</h2>
+          <p>{category.description}</p>
+        </div>
+      </div>
       <EventFilters controls={controls} />
-
-      <EventSection title="Upcoming Events" events={upcoming} onView={setSelectedEvent} onRegister={handleRegister} registeredIds={registeredIds} />
-      <EventSection title="Completed Events" events={completed} onView={setSelectedEvent} onRegister={handleRegister} registeredIds={registeredIds} />
-
-      {selectedEvent && (
-        <EventDetailsModal
-          event={selectedEvent}
-          onClose={() => setSelectedEvent(null)}
-          onRegister={handleRegister}
-          isRegistered={registeredIds.includes(selectedEvent.event_id)}
-        />
-      )}
+      <div className="event-card-grid discovery-grid">
+        {controls.events.map(event => (
+          <EventCard
+            event={event}
+            key={event.event_id}
+            onView={onView}
+            onRegister={onRegister}
+            isRegistered={registeredIds.includes(event.event_id)}
+          />
+        ))}
+        {!controls.events.length && <div className="panel loading-panel">No matching events found in this category.</div>}
+      </div>
     </section>
   );
 }
@@ -755,7 +862,7 @@ function EventCard({ event, onView, onRegister, isRegistered }) {
   const isCompetition = event.category === "Competitions";
   return (
     <article className="event-card">
-      <img src={event.poster} alt={`${event.event_name} poster`} />
+      <EventImage src={event.poster} alt={`${event.event_name} poster`} />
       <div className="event-card-body">
         <div className="event-card-top">
           <StatusBadge status={event.status} />
@@ -785,34 +892,77 @@ function EventCard({ event, onView, onRegister, isRegistered }) {
   );
 }
 
-function EventDetailsModal({ event, onClose, onRegister, isRegistered }) {
+function EventDetailPage({ event, events, onBack, onSelectEvent, onRegister, isRegistered }) {
   const isCompetition = event.category === "Competitions";
+  const relatedEvents = events.filter(item => item.category === event.category && item.event_id !== event.event_id).slice(0, 3);
   return (
-    <div className="modal-backdrop">
-      <div className="panel event-modal">
-        <div className="modal-title-row">
-          <h3>{event.event_name}</h3>
-          <button onClick={onClose} aria-label="Close event details"><X size={20} /></button>
+    <section className="events-module">
+      <div className="event-detail-hero">
+        <EventImage src={event.poster} alt={`${event.event_name} banner`} />
+        <span className="category-overlay" />
+        <div>
+          <button className="event-back-button" onClick={onBack} type="button">← Back to events</button>
+          <StatusBadge status={event.status} />
+          <h2>{event.event_name}</h2>
+          <p>{event.description}</p>
         </div>
-        <img className="event-modal-poster" src={event.poster} alt={`${event.event_name} poster`} />
-        <p className="event-description">{event.description}</p>
-        <div className="metric-stack">
-          <Metric label="Category" value={event.category} />
+      </div>
+
+      <section className="event-detail-layout">
+        <div className="panel event-detail-main">
+          <h3>Complete Description</h3>
+          <p>{event.description}</p>
+          <h3>Event Gallery</h3>
+          <div className="event-gallery-grid">
+            {[event.poster, event.poster, event.poster].map((image, index) => (
+              <EventImage src={image} alt={`${event.event_name} gallery ${index + 1}`} key={`${event.event_id}-${index}`} />
+            ))}
+          </div>
+        </div>
+        <div className="panel event-detail-side">
           <Metric label="Date" value={formatDisplayDate(event.event_date)} />
           <Metric label="Time" value={`${event.start_time} - ${event.end_time}`} />
           <Metric label="Venue" value={event.venue} />
           <Metric label="Organizer" value={event.organizer} />
-          <Metric label="Eligibility" value={event.applicable_classes === "All" ? "All students" : `Classes ${event.applicable_classes}`} />
-          <Metric label="Max Participants" value={event.max_participants || "Open"} />
-          <Metric label="Deadline" value={formatDisplayDate(event.registration_deadline)} />
+          <Metric label="Applicable Classes" value={event.applicable_classes === "All" ? "All students" : `Classes ${event.applicable_classes}`} />
+          <Metric label="Registration" value={event.registration_deadline ? `Deadline ${formatDisplayDate(event.registration_deadline)}` : "No registration required"} />
+          {isCompetition && event.status === "Upcoming" && (
+            <button className="primary-action full-width" onClick={() => onRegister(event)} type="button">
+              {isRegistered ? "Registered" : "Register for Competition"}
+            </button>
+          )}
         </div>
-        {isCompetition && event.status === "Upcoming" && (
-          <button className="primary-action full-width" onClick={() => onRegister(event)} type="button">
-            {isRegistered ? "Registered" : "Register for Competition"}
-          </button>
-        )}
+      </section>
+
+      <div className="event-section">
+        <div className="event-section-title">
+          <h2>Related Events</h2>
+          <span>{relatedEvents.length} events</span>
+        </div>
+        <div className="event-card-grid discovery-grid">
+          {relatedEvents.map(item => (
+            <EventCard event={item} key={item.event_id} onView={onSelectEvent} onRegister={onRegister} isRegistered={false} />
+          ))}
+          {!relatedEvents.length && <div className="panel loading-panel">No related events found.</div>}
+        </div>
       </div>
-    </div>
+    </section>
+  );
+}
+
+function EventImage({ src, alt, className = "" }) {
+  const fallback = "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=900&q=80";
+  return (
+    <img
+      className={className}
+      src={src || fallback}
+      alt={alt}
+      onError={(event) => {
+        if (event.currentTarget.src !== fallback) {
+          event.currentTarget.src = fallback;
+        }
+      }}
+    />
   );
 }
 

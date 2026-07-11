@@ -37,6 +37,45 @@ const navItems = [
   { path: "risk", label: "Risk Analysis", icon: AlertTriangle },
 ];
 
+const eventCategories = [
+  {
+    title: "Festival Celebrations",
+    icon: "🪔",
+    description: "Diwali, Navratri, Holi, Uttarayan, and joyful festival gatherings.",
+    image: "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    title: "National Celebrations",
+    icon: "🇮🇳",
+    description: "Flag ceremonies, parades, assemblies, and national observances.",
+    image: "https://images.unsplash.com/photo-1532375810709-75b1da00537c?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    title: "Competitions",
+    icon: "🏆",
+    description: "Quiz, debate, coding, robotics, science fair, and inter-school contests.",
+    image: "https://images.unsplash.com/photo-1567427017947-545c5f8d16ad?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    title: "Sports Events",
+    icon: "⚽",
+    description: "Sports day, cricket, football, athletics, kabaddi, and team tournaments.",
+    image: "https://images.unsplash.com/photo-1547347298-4074fc3086f0?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    title: "Cultural Events",
+    icon: "🎭",
+    description: "Annual day, music, dance, drama, talent shows, and stage performances.",
+    image: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    title: "Academic Events",
+    icon: "📚",
+    description: "Workshops, seminars, exams, guest lectures, and academic meetings.",
+    image: "https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=1200&q=80",
+  },
+];
+
 export default function AdminPortal({ currentUser, onLogout }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [students, setStudents] = useState([]);
@@ -553,7 +592,10 @@ function ExamScheduleAdminPage({ schedule, refresh }) {
 function EventsAdminPage({ eventsData, refresh }) {
   const [editingEvent, setEditingEvent] = useState(null);
   const [showForm, setShowForm] = useState(false);
-  const controls = useEventAdminControls(eventsData.events);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const categoryEvents = selectedCategory ? eventsData.events.filter(event => event.category === selectedCategory.title) : [];
+  const controls = useEventAdminControls(categoryEvents);
 
   const handleDelete = async (eventId) => {
     if (confirm("Delete this event?")) {
@@ -580,6 +622,70 @@ function EventsAdminPage({ eventsData, refresh }) {
     refresh();
   };
 
+  if (selectedEvent) {
+    return (
+      <AdminEventDetailPage
+        event={selectedEvent}
+        events={eventsData.events}
+        onBack={() => setSelectedEvent(null)}
+        onSelectEvent={setSelectedEvent}
+        onEdit={(event) => {
+          setSelectedEvent(null);
+          setEditingEvent(event);
+        }}
+        onDelete={handleDelete}
+        onPublish={handlePublish}
+        onStatus={handleStatus}
+      />
+    );
+  }
+
+  if (selectedCategory) {
+    return (
+      <div className="admin-page">
+        <div className="event-category-hero">
+          <img src={selectedCategory.image} alt={`${selectedCategory.title} banner`} />
+          <span className="category-overlay" />
+          <div>
+            <button className="event-back-button" onClick={() => setSelectedCategory(null)} type="button">← Categories</button>
+            <span className="category-icon large">{selectedCategory.icon}</span>
+            <h2>{selectedCategory.title}</h2>
+            <p>{selectedCategory.description}</p>
+          </div>
+        </div>
+
+        {(showForm || editingEvent) && (
+          <EventForm
+            event={editingEvent}
+            onClose={() => { setShowForm(false); setEditingEvent(null); }}
+            onSave={() => { setShowForm(false); setEditingEvent(null); refresh(); }}
+          />
+        )}
+
+        <PageHeader
+          eyebrow="Manage Category"
+          title={`${selectedCategory.title} Events`}
+          actions={<button className="primary-action" onClick={() => setShowForm(true)} type="button"><Plus size={16} />Add Event</button>}
+        />
+        <EventAdminControls controls={controls} />
+        <div className="event-card-grid discovery-grid">
+          {controls.events.map(event => (
+            <AdminEventCard
+              event={event}
+              key={event.event_id}
+              onView={setSelectedEvent}
+              onEdit={setEditingEvent}
+              onDelete={handleDelete}
+              onPublish={handlePublish}
+              onStatus={handleStatus}
+            />
+          ))}
+          {!controls.events.length && <div className="panel loading-panel">No matching events found in this category.</div>}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="admin-page">
       <PageHeader
@@ -603,49 +709,150 @@ function EventsAdminPage({ eventsData, refresh }) {
         <MiniStat icon={CheckCircle2} label="Completed Events" value={eventsData.stats.completedEvents} />
       </section>
 
-      <EventAdminControls controls={controls} />
+      <div className="event-discovery-hero admin-event-discovery">
+        <div>
+          <span className="event-eyebrow">Discovery Layout</span>
+          <h2>Manage events by category, then publish, edit, complete, or remove individual cards.</h2>
+          <p>The admin view keeps management actions close to each event while avoiding a dense all-events table.</p>
+        </div>
+      </div>
 
-      <div className="panel admin-table-panel">
-        <table className="admin-table wide-table event-admin-table">
-          <thead>
-            <tr>
-              <th>Event</th>
-              <th>Category</th>
-              <th>Date</th>
-              <th>Venue</th>
-              <th>Classes</th>
-              <th>Participants</th>
-              <th>Status</th>
-              <th>Published</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {controls.events.map(event => (
-              <tr key={event.event_id}>
-                <td><strong>{event.event_name}</strong><span>{event.organizer}</span></td>
-                <td>{event.category}</td>
-                <td>{formatDisplayDate(event.event_date)}<span>{event.start_time} - {event.end_time}</span></td>
-                <td>{event.venue}</td>
-                <td>{event.applicable_classes === "All" ? "All" : `Class ${event.applicable_classes}`}</td>
-                <td>{event.max_participants || "Open"}</td>
-                <td><StatusBadge status={event.status} /></td>
-                <td><StatusBadge status={event.published ? "Published" : "Draft"} /></td>
-                <td>
-                  <div className="table-actions">
-                    <button aria-label={`Edit ${event.event_name}`} onClick={() => setEditingEvent(event)}><Edit size={18} /></button>
-                    <button aria-label={`Publish ${event.event_name}`} onClick={() => handlePublish(event)}><Eye size={18} /></button>
-                    <button aria-label={`Complete ${event.event_name}`} onClick={() => handleStatus(event, event.status === "Completed" ? "Upcoming" : "Completed")}><CheckCircle2 size={18} /></button>
-                    <button aria-label={`Delete ${event.event_name}`} className="danger" onClick={() => handleDelete(event.event_id)}><Trash2 size={18} /></button>
-                  </div>
-                </td>
-              </tr>
+      <CategoryCardGrid events={eventsData.events} onSelect={setSelectedCategory} />
+    </div>
+  );
+}
+
+function CategoryCardGrid({ events, onSelect }) {
+  return (
+    <div className="event-category-grid">
+      {eventCategories.map(category => {
+        const count = events.filter(event => event.category === category.title).length;
+        return (
+          <button className="event-category-card" key={category.title} onClick={() => onSelect(category)} type="button">
+            <img src={category.image} alt={`${category.title} banner`} />
+            <span className="category-overlay" />
+            <span className="category-icon">{category.icon}</span>
+            <span className="category-count">{count} events</span>
+            <span className="category-content">
+              <strong>{category.title}</strong>
+              <small>{category.description}</small>
+              <em>View Events →</em>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function AdminEventCard({ event, onView, onEdit, onDelete, onPublish, onStatus }) {
+  return (
+    <article className="event-card admin-event-card">
+      <EventImage src={event.poster} alt={`${event.event_name} poster`} />
+      <div className="event-card-body">
+        <div className="event-card-top">
+          <StatusBadge status={event.status} />
+          <StatusBadge status={event.published ? "Published" : "Draft"} />
+        </div>
+        <h3>{event.event_name}</h3>
+        <p>{event.description}</p>
+        <div className="event-meta-grid">
+          <span>{formatDisplayDate(event.event_date)}</span>
+          <span>{event.start_time} - {event.end_time}</span>
+          <span>{event.venue}</span>
+          <span>{event.organizer}</span>
+        </div>
+        <div className="event-actions">
+          <button className="secondary-action compact-action" onClick={() => onView(event)} type="button"><Eye size={16} />Details</button>
+          <button className="secondary-action compact-action" onClick={() => onEdit(event)} type="button"><Edit size={16} />Edit</button>
+          <button className="secondary-action compact-action" onClick={() => onPublish(event)} type="button">{event.published ? "Unpublish" : "Publish"}</button>
+          <button className="secondary-action compact-action" onClick={() => onStatus(event, event.status === "Completed" ? "Upcoming" : "Completed")} type="button">
+            {event.status === "Completed" ? "Reopen" : "Complete"}
+          </button>
+          <button className="secondary-action compact-action danger-action" onClick={() => onDelete(event.event_id)} type="button"><Trash2 size={16} />Delete</button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function AdminEventDetailPage({ event, events, onBack, onSelectEvent, onEdit, onDelete, onPublish, onStatus }) {
+  const relatedEvents = events.filter(item => item.category === event.category && item.event_id !== event.event_id).slice(0, 3);
+  return (
+    <div className="admin-page">
+      <div className="event-detail-hero">
+        <EventImage src={event.poster} alt={`${event.event_name} banner`} />
+        <span className="category-overlay" />
+        <div>
+          <button className="event-back-button" onClick={onBack} type="button">← Back to events</button>
+          <StatusBadge status={event.status} />
+          <h2>{event.event_name}</h2>
+          <p>{event.description}</p>
+          <div className="event-actions hero-actions">
+            <button className="primary-action compact-action" onClick={() => onEdit(event)} type="button"><Edit size={16} />Edit</button>
+            <button className="secondary-action compact-action" onClick={() => onPublish(event)} type="button">{event.published ? "Unpublish" : "Publish"}</button>
+            <button className="secondary-action compact-action" onClick={() => onStatus(event, event.status === "Completed" ? "Upcoming" : "Completed")} type="button">
+              {event.status === "Completed" ? "Reopen" : "Complete"}
+            </button>
+            <button className="secondary-action compact-action danger-action" onClick={() => onDelete(event.event_id)} type="button"><Trash2 size={16} />Delete</button>
+          </div>
+        </div>
+      </div>
+
+      <section className="event-detail-layout">
+        <div className="panel event-detail-main">
+          <h3>Complete Description</h3>
+          <p>{event.description}</p>
+          <h3>Event Gallery</h3>
+          <div className="event-gallery-grid">
+            {[event.poster, event.poster, event.poster].map((image, index) => (
+              <EventImage src={image} alt={`${event.event_name} gallery ${index + 1}`} key={`${event.event_id}-${index}`} />
             ))}
-            {!controls.events.length && <EmptyRow columns={9} message="No event records found." />}
-          </tbody>
-        </table>
+          </div>
+        </div>
+        <div className="panel event-detail-side">
+          <MetricStack items={[
+            ["Category", event.category],
+            ["Date", formatDisplayDate(event.event_date)],
+            ["Time", `${event.start_time} - ${event.end_time}`],
+            ["Venue", event.venue],
+            ["Organizer", event.organizer],
+            ["Applicable Classes", event.applicable_classes === "All" ? "All students" : `Classes ${event.applicable_classes}`],
+            ["Registration", event.registration_deadline ? `Deadline ${formatDisplayDate(event.registration_deadline)}` : "No registration required"],
+            ["Maximum Participants", event.max_participants || "Open"],
+          ]} />
+        </div>
+      </section>
+
+      <div className="event-section">
+        <div className="event-section-title">
+          <h2>Related Events</h2>
+          <span>{relatedEvents.length} events</span>
+        </div>
+        <div className="event-card-grid discovery-grid">
+          {relatedEvents.map(item => (
+            <AdminEventCard event={item} key={item.event_id} onView={onSelectEvent} onEdit={onEdit} onDelete={onDelete} onPublish={onPublish} onStatus={onStatus} />
+          ))}
+          {!relatedEvents.length && <div className="panel loading-panel">No related events found.</div>}
+        </div>
       </div>
     </div>
+  );
+}
+
+function EventImage({ src, alt, className = "" }) {
+  const fallback = "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=900&q=80";
+  return (
+    <img
+      className={className}
+      src={src || fallback}
+      alt={alt}
+      onError={(event) => {
+        if (event.currentTarget.src !== fallback) {
+          event.currentTarget.src = fallback;
+        }
+      }}
+    />
   );
 }
 

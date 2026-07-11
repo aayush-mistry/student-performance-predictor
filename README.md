@@ -193,25 +193,40 @@ Integration:
 - The Flask backend stores schedule records in SQLite through the SQLAlchemy `Exam` model.
 
 ## Events & Activities Module
-The Events & Activities module adds a school activity calendar for celebrations, competitions, sports, cultural programs, and academic events.
+The Events & Activities module adds a modern event discovery experience for celebrations, competitions, sports, cultural programs, and academic events.
+
+Design:
+- Category-first layout with large image cards.
+- Modern event cards with banner images, status badges, date, time, venue, organizer, and details actions.
+- Full event detail pages with large hero banners, complete information, gallery placeholders, and related events.
+- Hover scaling, shadows, image overlays, rounded corners, gradients, and responsive grids.
+
+Screenshots placeholder:
+```text
+[Screenshot: Events category discovery cards]
+[Screenshot: Category-specific event cards]
+[Screenshot: Event detail page]
+[Screenshot: Admin event management cards]
+```
 
 Student functionalities:
-- View upcoming, ongoing, and completed events.
-- Search events by event name, category, or venue.
-- Filter events by category, month, class, and status.
-- View event details including date, time, venue, organizer, description, eligibility, maximum participants, registration deadline, priority, and poster.
+- Browse six category cards: Festival Celebrations, National Celebrations, Competitions, Sports Events, Cultural Events, and Academic Events.
+- Open a category to view only events from that category.
+- Search and filter category events by month, class, and status.
+- View event details including date, time, venue, organizer, description, eligibility, maximum participants, registration deadline, priority, gallery placeholder, related events, and poster.
 - See countdown badges for upcoming events.
 - View event poster images.
 - Register locally for competitions from the student UI.
 
 Admin functionalities:
 - Dashboard card named `Upcoming Events` with total, upcoming, ongoing, and completed counts.
-- Add, edit, and delete events.
+- Browse and manage events using the same category-card discovery layout.
+- Add, edit, and delete events from category pages.
 - Publish or unpublish events.
 - Mark events as Upcoming, Ongoing, Completed, or Cancelled.
 - Store event poster URLs or uploaded poster paths.
 - Assign events to specific classes or all students.
-- Filter and search the event table by category, month, class, status, event name, and venue.
+- Filter and search category event cards by month, class, status, event name, and venue.
 
 Event categories:
 - Festival Celebrations
@@ -244,8 +259,8 @@ Events
 ```
 
 User flow:
-- Students open `Events & Activities` from the sidebar, search or filter the event list, review event posters/details, and register for competition-type events.
-- Admins open `Events & Activities` from the sidebar or the `Upcoming Events` dashboard card, then manage event records through the add/edit modal and table actions.
+- Students open `Events & Activities` from the sidebar, choose a category card, browse category-specific event cards, and open a complete event page for details, gallery placeholders, and related events.
+- Admins open `Events & Activities` from the sidebar or the `Upcoming Events` dashboard card, choose a category card, then manage event cards using add, edit, delete, publish, and status actions.
 - The React portals call the Flask event APIs, and Flask persists event records in SQLite through the SQLAlchemy `Event` model.
 
 ## Authentication Flow
