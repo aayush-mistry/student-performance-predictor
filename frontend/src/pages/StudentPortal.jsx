@@ -2,10 +2,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   BarChart3,
   BookOpen,
+  CalendarClock,
   CalendarDays,
   CheckCircle2,
   ClipboardList,
   HelpCircle,
+  Eye,
   LineChart,
   LogOut,
   Mail,
@@ -94,12 +96,31 @@ const fallbackPrediction = {
 
 const tabs = [
   { id: "activity", label: "Study Activity", icon: Timer },
+  { id: "examSchedule", label: "Exam Schedule", icon: CalendarClock },
   { id: "marks", label: "Previous Marks", icon: BookOpen },
   { id: "attendance", label: "Attendance", icon: CalendarDays },
   { id: "assignments", label: "Assignments", icon: ClipboardList },
   { id: "prediction", label: "Prediction", icon: TrendingUp },
   { id: "help", label: "Help", icon: HelpCircle },
 ];
+
+const fallbackExamSchedule = {
+  unitTests: [
+    { exam_id: 1, subject: "Mathematics", exam_name: "Unit Test 3", date: "2026-07-11", start_time: "09:00 AM", end_time: "10:00 AM", duration: "1 hour", status: "Published" },
+    { exam_id: 2, subject: "Science", exam_name: "Unit Test 3", date: "2026-07-12", start_time: "09:00 AM", end_time: "10:00 AM", duration: "1 hour", status: "Published" },
+    { exam_id: 3, subject: "English", exam_name: "Unit Test 3", date: "2026-07-15", start_time: "10:30 AM", end_time: "11:30 AM", duration: "1 hour", status: "Published" },
+  ],
+  finalExams: [
+    { exam_id: 5, subject: "Gujarati", date: "2026-08-03", start_time: "09:30 AM", end_time: "12:30 PM", duration: "3 hours", hall_number: "Hall 1", maximum_marks: 100, status: "Published" },
+    { exam_id: 7, subject: "Mathematics", date: "2026-08-10", start_time: "09:30 AM", end_time: "12:30 PM", duration: "3 hours", hall_number: "Hall 2", maximum_marks: 100, status: "Published" },
+    { exam_id: 10, subject: "Social Studies", date: "2026-08-20", start_time: "09:30 AM", end_time: "12:30 PM", duration: "3 hours", hall_number: "Hall 3", maximum_marks: 100, status: "Published" },
+  ],
+  completedExams: [
+    { exam_id: 11, subject: "Mathematics", date: "2026-06-10", exam_type: "Unit Test", result_status: "Published", marks_available: true, maximum_marks: 25 },
+    { exam_id: 12, subject: "Science", date: "2026-06-12", exam_type: "Unit Test", result_status: "Published", marks_available: true, maximum_marks: 25 },
+    { exam_id: 13, subject: "English", date: "2026-06-18", exam_type: "Mid Term", result_status: "Awaiting Result", marks_available: false, maximum_marks: 20 },
+  ],
+};
 
 function useStudentData(studentId) {
   const [student, setStudent] = useState(fallbackStudent);
@@ -131,8 +152,28 @@ function useStudentData(studentId) {
   return { student, prediction, apiStatus };
 }
 
+function useExamSchedule() {
+  const [schedule, setSchedule] = useState(fallbackExamSchedule);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const response = await fetch(`${API_BASE}/exams/schedule`);
+        if (!response.ok) throw new Error("Exam schedule unavailable");
+        setSchedule(await response.json());
+      } catch {
+        setSchedule(fallbackExamSchedule);
+      }
+    }
+    load();
+  }, []);
+
+  return schedule;
+}
+
 export default function StudentPortal({ currentUser, onLogout }) {
   const { student, prediction, apiStatus } = useStudentData(currentUser?.studentId);
+  const examSchedule = useExamSchedule();
   const [activeTab, setActiveTab] = useState("activity");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
@@ -144,6 +185,7 @@ export default function StudentPortal({ currentUser, onLogout }) {
 
   const page = {
     activity: <Activity student={student} />,
+    examSchedule: <ExamSchedule schedule={examSchedule} />,
     marks: <PreviousMarks exams={student.previousExams} />,
     attendance: <Attendance attendance={student.attendance} />,
     assignments: <Assignments assignments={student.assignments} />,
@@ -448,6 +490,133 @@ function Help({ help }) {
   );
 }
 
+function ExamSchedule({ schedule }) {
+  const [selectedResult, setSelectedResult] = useState(null);
+
+  return (
+    <section className="exam-module">
+      <div className="panel">
+        <PanelTitle icon={CalendarClock} title="Upcoming Unit Tests" />
+        <div className="responsive-table">
+          <table className="admin-table exam-table">
+            <thead>
+              <tr>
+                <th>Subject</th>
+                <th>Exam Name</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Duration</th>
+                <th>Days Left</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {schedule.unitTests.map(exam => (
+                <tr key={exam.exam_id}>
+                  <td><strong>{exam.subject}</strong></td>
+                  <td>{exam.exam_name}</td>
+                  <td>{formatDisplayDate(exam.date)}</td>
+                  <td>{exam.start_time} - {exam.end_time}</td>
+                  <td>{exam.duration}</td>
+                  <td><CountdownBadge date={exam.date} /></td>
+                  <td><StatusBadge status={exam.status} /></td>
+                </tr>
+              ))}
+              {!schedule.unitTests.length && <EmptyExamRow columns={7} />}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="panel">
+        <PanelTitle icon={CalendarDays} title="Final Examination Schedule" />
+        <div className="responsive-table">
+          <table className="admin-table exam-table">
+            <thead>
+              <tr>
+                <th>Subject</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Duration</th>
+                <th>Hall Number</th>
+                <th>Maximum Marks</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {schedule.finalExams.map(exam => (
+                <tr key={exam.exam_id}>
+                  <td><strong>{exam.subject}</strong></td>
+                  <td>{formatDisplayDate(exam.date)}</td>
+                  <td>{exam.start_time} - {exam.end_time}</td>
+                  <td>{exam.duration}</td>
+                  <td>{exam.hall_number || "-"}</td>
+                  <td>{exam.maximum_marks}</td>
+                  <td><StatusBadge status={exam.status} /></td>
+                </tr>
+              ))}
+              {!schedule.finalExams.length && <EmptyExamRow columns={7} />}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="panel">
+        <PanelTitle icon={CheckCircle2} title="Completed Exams" />
+        <div className="responsive-table">
+          <table className="admin-table exam-table">
+            <thead>
+              <tr>
+                <th>Subject</th>
+                <th>Date</th>
+                <th>Exam Type</th>
+                <th>Result Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {schedule.completedExams.map(exam => (
+                <tr key={exam.exam_id}>
+                  <td><strong>{exam.subject}</strong></td>
+                  <td>{formatDisplayDate(exam.date)}</td>
+                  <td>{exam.exam_type}</td>
+                  <td><StatusBadge status={exam.result_status} /></td>
+                  <td>
+                    {exam.marks_available ? (
+                      <button className="secondary-action compact-action" onClick={() => setSelectedResult(exam)} type="button">
+                        <Eye size={16} />
+                        View Result
+                      </button>
+                    ) : "Not available"}
+                  </td>
+                </tr>
+              ))}
+              {!schedule.completedExams.length && <EmptyExamRow columns={5} />}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {selectedResult && (
+        <div className="modal-backdrop">
+          <div className="panel admin-modal">
+            <div className="modal-title-row">
+              <h3>{selectedResult.subject} Result</h3>
+              <button onClick={() => setSelectedResult(null)} aria-label="Close result"><X size={20} /></button>
+            </div>
+            <div className="metric-stack">
+              <Metric label="Exam Type" value={selectedResult.exam_type} />
+              <Metric label="Maximum Marks" value={selectedResult.maximum_marks || 100} />
+              <Metric label="Status" value={selectedResult.result_status} />
+              <Metric label="Date" value={formatDisplayDate(selectedResult.date)} />
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function PanelTitle({ icon: Icon, title }) {
   return (
     <div className="panel-title">
@@ -501,4 +670,33 @@ function countStatuses(days) {
     value: days.filter((day) => day.status === status).length,
     color: colors[status],
   }));
+}
+
+function formatDisplayDate(date) {
+  return new Date(`${date}T00:00:00`).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function getDaysLeft(date) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const examDate = new Date(`${date}T00:00:00`);
+  return Math.ceil((examDate - today) / 86400000);
+}
+
+function CountdownBadge({ date }) {
+  const days = getDaysLeft(date);
+  const label = days === 0 ? "Today" : days === 1 ? "Tomorrow" : days > 1 ? `${days} Days Left` : "Completed";
+  return <span className={`countdown-badge ${days <= 1 && days >= 0 ? "urgent" : ""}`}>{label}</span>;
+}
+
+function StatusBadge({ status }) {
+  return <span className={`status-badge ${String(status).toLowerCase().replace(/\s+/g, "-")}`}>{status}</span>;
+}
+
+function EmptyExamRow({ columns }) {
+  return <tr><td className="empty-table" colSpan={columns}>No exam records found.</td></tr>;
 }

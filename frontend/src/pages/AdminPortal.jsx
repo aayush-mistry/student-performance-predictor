@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
+  CalendarClock,
   CalendarDays,
+  CheckCircle2,
   ClipboardList,
   Download,
   Edit,
@@ -27,6 +29,7 @@ const SUBJECTS = ["maths", "science", "ss", "english", "gujarati", "hindi"];
 const navItems = [
   { path: "dashboard", label: "Dashboard", icon: TrendingUp },
   { path: "students", label: "Students", icon: Users },
+  { path: "exams", label: "Exam Schedule", icon: CalendarClock },
   { path: "attendance", label: "Attendance", icon: CalendarDays },
   { path: "assignments", label: "Assignments", icon: ClipboardList },
   { path: "risk", label: "Risk Analysis", icon: AlertTriangle },
@@ -35,11 +38,13 @@ const navItems = [
 export default function AdminPortal({ currentUser, onLogout }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [students, setStudents] = useState([]);
+  const [examSchedule, setExamSchedule] = useState({ unitTests: [], finalExams: [], completedExams: [] });
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchStudents();
+    fetchExamSchedule();
   }, []);
 
   const fetchStudents = async () => {
@@ -53,6 +58,17 @@ export default function AdminPortal({ currentUser, onLogout }) {
       console.error(e);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchExamSchedule = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/admin/exams`);
+      if (res.ok) {
+        setExamSchedule(await res.json());
+      }
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -104,8 +120,9 @@ export default function AdminPortal({ currentUser, onLogout }) {
         <main className="content">
           <Routes>
             <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<AdminDashboard students={students} isLoading={isLoading} />} />
+            <Route path="dashboard" element={<AdminDashboard students={students} examSchedule={examSchedule} isLoading={isLoading} />} />
             <Route path="students" element={<StudentsPage students={students} isLoading={isLoading} refresh={fetchStudents} />} />
+            <Route path="exams" element={<ExamScheduleAdminPage schedule={examSchedule} refresh={fetchExamSchedule} />} />
             <Route path="attendance" element={<AttendancePage students={students} isLoading={isLoading} />} />
             <Route path="assignments" element={<AssignmentsPage students={students} isLoading={isLoading} />} />
             <Route path="risk" element={<RiskPage students={students} isLoading={isLoading} />} />
@@ -117,11 +134,13 @@ export default function AdminPortal({ currentUser, onLogout }) {
   );
 }
 
-function AdminDashboard({ students, isLoading }) {
+function AdminDashboard({ students, examSchedule, isLoading }) {
   const navigate = useNavigate();
   const stats = useMemo(() => getDashboardStats(students), [students]);
+  const upcomingExamCount = (examSchedule.unitTests || []).length + (examSchedule.finalExams || []).filter(exam => exam.status !== "Completed").length;
   const cards = [
     { label: "Total Students", value: stats.totalStudents, icon: Users, color: "blue", to: "/admin/students" },
+    { label: "Upcoming Exams", value: upcomingExamCount, icon: CalendarClock, color: "violet", to: "/admin/exams" },
     { label: "Avg Attendance", value: `${stats.avgAttendance}%`, icon: CalendarDays, color: "green", to: "/admin/attendance" },
     { label: "Assignments Done", value: stats.assignmentsDone, icon: ClipboardList, color: "amber", to: "/admin/assignments" },
     { label: "Students At Risk", value: stats.atRisk, icon: AlertTriangle, color: "red", to: "/admin/risk" },
@@ -400,6 +419,193 @@ function RiskPage({ students, isLoading }) {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+function ExamScheduleAdminPage({ schedule, refresh }) {
+  const [editingExam, setEditingExam] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const allExams = [...schedule.unitTests, ...schedule.finalExams, ...schedule.completedExams];
+
+  const handleDelete = async (examId) => {
+    if (confirm("Delete this exam schedule?")) {
+      await fetch(`${API_BASE}/admin/exams/${examId}`, { method: "DELETE" });
+      refresh();
+    }
+  };
+
+  const handlePublish = async (examId) => {
+    await fetch(`${API_BASE}/admin/exams/${examId}/publish`, { method: "PATCH" });
+    refresh();
+  };
+
+  const handleResult = async (exam) => {
+    await fetch(`${API_BASE}/admin/exams/${exam.exam_id}/result`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ result_published: !exam.result_published, status: exam.status }),
+    });
+    refresh();
+  };
+
+  return (
+    <div className="admin-page">
+      <PageHeader
+        eyebrow="Timetable"
+        title="Exam Schedule"
+        actions={<button className="primary-action" onClick={() => setShowForm(true)} type="button"><Plus size={16} />Add Exam</button>}
+      />
+
+      {(showForm || editingExam) && (
+        <ExamForm
+          exam={editingExam}
+          onClose={() => { setShowForm(false); setEditingExam(null); }}
+          onSave={() => { setShowForm(false); setEditingExam(null); refresh(); }}
+        />
+      )}
+
+      <section className="summary-grid">
+        <MiniStat icon={CalendarClock} label="Upcoming Unit Tests" value={schedule.unitTests.length} />
+        <MiniStat icon={GraduationCap} label="Final Exams" value={schedule.finalExams.length} />
+        <MiniStat icon={CheckCircle2} label="Completed Exams" value={schedule.completedExams.length} />
+        <MiniStat icon={Eye} label="Published Results" value={schedule.completedExams.filter(exam => exam.result_published).length} />
+      </section>
+
+      <ExamAdminSection
+        title="Upcoming Unit Tests"
+        exams={schedule.unitTests}
+        columns={["Subject", "Exam Name", "Date", "Time", "Duration", "Days Left", "Status", "Actions"]}
+        renderCells={(exam) => (
+          <>
+            <td><strong>{exam.subject}</strong></td>
+            <td>{exam.exam_name}</td>
+            <td>{formatDisplayDate(exam.date)}</td>
+            <td>{exam.start_time} - {exam.end_time}</td>
+            <td>{exam.duration}</td>
+            <td><CountdownBadge date={exam.date} /></td>
+            <td><StatusBadge status={exam.status} /></td>
+            <td><ExamActions exam={exam} onEdit={setEditingExam} onDelete={handleDelete} onPublish={handlePublish} onResult={handleResult} /></td>
+          </>
+        )}
+      />
+
+      <ExamAdminSection
+        title="Final Examination Schedule"
+        exams={schedule.finalExams}
+        columns={["Subject", "Date", "Time", "Duration", "Hall Number", "Maximum Marks", "Status", "Actions"]}
+        renderCells={(exam) => (
+          <>
+            <td><strong>{exam.subject}</strong></td>
+            <td>{formatDisplayDate(exam.date)}</td>
+            <td>{exam.start_time} - {exam.end_time}</td>
+            <td>{exam.duration}</td>
+            <td>{exam.hall_number || "-"}</td>
+            <td>{exam.maximum_marks}</td>
+            <td><StatusBadge status={exam.status} /></td>
+            <td><ExamActions exam={exam} onEdit={setEditingExam} onDelete={handleDelete} onPublish={handlePublish} onResult={handleResult} /></td>
+          </>
+        )}
+      />
+
+      <ExamAdminSection
+        title="Completed Exams"
+        exams={schedule.completedExams}
+        columns={["Subject", "Date", "Exam Type", "Result Status", "Actions"]}
+        renderCells={(exam) => (
+          <>
+            <td><strong>{exam.subject}</strong></td>
+            <td>{formatDisplayDate(exam.date)}</td>
+            <td>{exam.exam_type}</td>
+            <td><StatusBadge status={exam.result_status} /></td>
+            <td><ExamActions exam={exam} onEdit={setEditingExam} onDelete={handleDelete} onPublish={handlePublish} onResult={handleResult} /></td>
+          </>
+        )}
+      />
+
+      {!allExams.length && <div className="panel loading-panel">No exam schedules have been added yet.</div>}
+    </div>
+  );
+}
+
+function ExamAdminSection({ title, exams, columns, renderCells }) {
+  return (
+    <div className="panel admin-table-panel">
+      <div className="table-panel-title">{title}</div>
+      <table className="admin-table wide-table">
+        <thead>
+          <tr>{columns.map(column => <th key={column}>{column}</th>)}</tr>
+        </thead>
+        <tbody>
+          {exams.map(exam => <tr key={exam.exam_id}>{renderCells(exam)}</tr>)}
+          {!exams.length && <EmptyRow columns={columns.length} message="No exam records found." />}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ExamActions({ exam, onEdit, onDelete, onPublish, onResult }) {
+  return (
+    <div className="table-actions">
+      <button aria-label={`Edit ${exam.subject}`} onClick={() => onEdit(exam)}><Edit size={18} /></button>
+      <button aria-label={`Publish ${exam.subject}`} onClick={() => onPublish(exam.exam_id)}><Eye size={18} /></button>
+      <button aria-label={`Toggle result for ${exam.subject}`} onClick={() => onResult(exam)}><CheckCircle2 size={18} /></button>
+      <button aria-label={`Delete ${exam.subject}`} className="danger" onClick={() => onDelete(exam.exam_id)}><Trash2 size={18} /></button>
+    </div>
+  );
+}
+
+function ExamForm({ exam, onClose, onSave }) {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const data = Object.fromEntries(fd.entries());
+    data.maximum_marks = Number(data.maximum_marks || 100);
+    data.result_published = fd.get("result_published") === "on";
+    const method = exam ? "PUT" : "POST";
+    const url = exam ? `${API_BASE}/admin/exams/${exam.exam_id}` : `${API_BASE}/admin/exams`;
+    await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    onSave();
+  };
+
+  return (
+    <div className="modal-backdrop">
+      <div className="panel admin-modal">
+        <div className="modal-title-row">
+          <h3>{exam ? "Edit Exam" : "Add Exam"}</h3>
+          <button onClick={onClose} aria-label="Close exam form"><X size={20} /></button>
+        </div>
+        <form className="admin-form" onSubmit={handleSubmit}>
+          <label>Subject<input name="subject" defaultValue={exam?.subject} required /></label>
+          <label>Exam Name<input name="exam_name" defaultValue={exam?.exam_name} required /></label>
+          <label>Exam Type<input name="exam_type" defaultValue={exam?.exam_type || "Unit Test"} required /></label>
+          <label>Class<input name="class" defaultValue={exam?.class || "10"} /></label>
+          <label>Division<input name="division" defaultValue={exam?.division || "A"} /></label>
+          <label>Date<input name="date" type="date" defaultValue={exam?.date} required /></label>
+          <label>Start Time<input name="start_time" defaultValue={exam?.start_time || "09:00 AM"} required /></label>
+          <label>End Time<input name="end_time" defaultValue={exam?.end_time || "10:00 AM"} required /></label>
+          <label>Duration<input name="duration" defaultValue={exam?.duration || "1 hour"} required /></label>
+          <label>Hall Number<input name="hall_number" defaultValue={exam?.hall_number} /></label>
+          <label>Maximum Marks<input name="maximum_marks" type="number" defaultValue={exam?.maximum_marks || 100} /></label>
+          <label>Status<input name="status" defaultValue={exam?.status || "Draft"} /></label>
+          <label className="checkbox-row"><input name="result_published" type="checkbox" defaultChecked={exam?.result_published} />Result Published</label>
+          <button className="primary-action full-width" type="submit">Save Exam</button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function MiniStat({ icon: Icon, label, value }) {
+  return (
+    <div className="mini-stat-card">
+      <span><Icon size={18} />{label}</span>
+      <strong>{value}</strong>
     </div>
   );
 }
@@ -798,4 +1004,29 @@ function LoadingBlock() {
 
 function EmptyRow({ columns, message = "No matching records found." }) {
   return <tr><td className="empty-table" colSpan={columns}>{message}</td></tr>;
+}
+
+function formatDisplayDate(date) {
+  return new Date(`${date}T00:00:00`).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function getDaysLeft(date) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const examDate = new Date(`${date}T00:00:00`);
+  return Math.ceil((examDate - today) / 86400000);
+}
+
+function CountdownBadge({ date }) {
+  const days = getDaysLeft(date);
+  const label = days === 0 ? "Today" : days === 1 ? "Tomorrow" : days > 1 ? `${days} Days Left` : "Completed";
+  return <span className={`countdown-badge ${days <= 1 && days >= 0 ? "urgent" : ""}`}>{label}</span>;
+}
+
+function StatusBadge({ status }) {
+  return <span className={`status-badge ${String(status).toLowerCase().replace(/\s+/g, "-")}`}>{status}</span>;
 }

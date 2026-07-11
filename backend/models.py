@@ -64,6 +64,22 @@ class ExamMark(db.Model):
     
     student = relationship("Student", back_populates="exams")
 
+class Exam(db.Model):
+    exam_id = db.Column(db.Integer, primary_key=True)
+    subject = db.Column(db.String(50), nullable=False)
+    exam_name = db.Column(db.String(100), nullable=False)
+    exam_type = db.Column(db.String(30), nullable=False)
+    current_class = db.Column("class", db.String(20))
+    division = db.Column(db.String(10))
+    date = db.Column(db.String(20), nullable=False)
+    start_time = db.Column(db.String(20), nullable=False)
+    end_time = db.Column(db.String(20), nullable=False)
+    duration = db.Column(db.String(30), nullable=False)
+    hall_number = db.Column(db.String(30))
+    maximum_marks = db.Column(db.Integer, default=100)
+    status = db.Column(db.String(30), nullable=False, default="Draft")
+    result_published = db.Column(db.Boolean, default=False)
+
 class Attendance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)

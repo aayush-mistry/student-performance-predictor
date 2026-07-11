@@ -1,5 +1,5 @@
 from app import app, serialize_student, calculate_prediction_logic
-from models import db, User, Student, StudyHours, Activity, ExamMark, Attendance, Assignment, Prediction
+from models import db, User, Student, StudyHours, Activity, ExamMark, Attendance, Assignment, Prediction, Exam
 import json
 
 SUBJECTS = ['maths', 'science', 'ss', 'english', 'gujarati', 'hindi']
@@ -12,6 +12,22 @@ ASSIGNMENT_TOTALS = {
     'Gujarati': 7,
     'Hindi': 7,
 }
+
+EXAM_RECORDS = [
+    ("Mathematics", "Unit Test 3", "Unit Test", "10", "A", "2026-07-11", "09:00 AM", "10:00 AM", "1 hour", "A-201", 25, "Published", False),
+    ("Science", "Unit Test 3", "Unit Test", "10", "A", "2026-07-12", "09:00 AM", "10:00 AM", "1 hour", "A-202", 25, "Published", False),
+    ("English", "Unit Test 3", "Unit Test", "10", "A", "2026-07-15", "10:30 AM", "11:30 AM", "1 hour", "B-104", 25, "Published", False),
+    ("Social Studies", "Unit Test 3", "Unit Test", "10", "A", "2026-07-18", "09:00 AM", "10:00 AM", "1 hour", "B-105", 25, "Scheduled", False),
+    ("Gujarati", "Final Examination", "Final", "10", "A", "2026-08-03", "09:30 AM", "12:30 PM", "3 hours", "Hall 1", 100, "Published", False),
+    ("Hindi", "Final Examination", "Final", "10", "A", "2026-08-06", "09:30 AM", "12:30 PM", "3 hours", "Hall 1", 100, "Published", False),
+    ("Mathematics", "Final Examination", "Final", "10", "A", "2026-08-10", "09:30 AM", "12:30 PM", "3 hours", "Hall 2", 100, "Published", False),
+    ("Science", "Final Examination", "Final", "10", "A", "2026-08-13", "09:30 AM", "12:30 PM", "3 hours", "Hall 2", 100, "Published", False),
+    ("English", "Final Examination", "Final", "10", "A", "2026-08-17", "09:30 AM", "12:30 PM", "3 hours", "Hall 3", 100, "Published", False),
+    ("Social Studies", "Final Examination", "Final", "10", "A", "2026-08-20", "09:30 AM", "12:30 PM", "3 hours", "Hall 3", 100, "Published", False),
+    ("Mathematics", "Unit Test 2", "Unit Test", "10", "A", "2026-06-10", "09:00 AM", "10:00 AM", "1 hour", "A-201", 25, "Completed", True),
+    ("Science", "Unit Test 2", "Unit Test", "10", "A", "2026-06-12", "09:00 AM", "10:00 AM", "1 hour", "A-202", 25, "Completed", True),
+    ("English", "Mid Term Oral", "Mid Term", "10", "A", "2026-06-18", "11:00 AM", "11:45 AM", "45 minutes", "Language Lab", 20, "Completed", False),
+]
 
 STUDENT_RECORDS = [
     ('S103', 'Aarav Sharma', 'Rajesh Sharma', '+91 98765 41003', 'aarav.sharma@example.edu', '10', 'A', 'top', [91, 93, 90, 92, 95, 89], 5.5, 1.4, 1, 52),
@@ -166,6 +182,37 @@ def seed_additional_students():
             added += 1
     return added
 
+def seed_exam_records():
+    added = 0
+    for subject, exam_name, exam_type, current_class, division, date, start_time, end_time, duration, hall_number, maximum_marks, status, result_published in EXAM_RECORDS:
+        exists = Exam.query.filter_by(
+            subject=subject,
+            exam_name=exam_name,
+            exam_type=exam_type,
+            current_class=current_class,
+            division=division,
+            date=date,
+        ).first()
+        if exists:
+            continue
+        db.session.add(Exam(
+            subject=subject,
+            exam_name=exam_name,
+            exam_type=exam_type,
+            current_class=current_class,
+            division=division,
+            date=date,
+            start_time=start_time,
+            end_time=end_time,
+            duration=duration,
+            hall_number=hall_number,
+            maximum_marks=maximum_marks,
+            status=status,
+            result_published=result_published,
+        ))
+        added += 1
+    return added
+
 def init_db():
     with app.app_context():
         db.create_all()
@@ -276,9 +323,10 @@ def init_db():
             db.session.add(prediction)
 
         added = seed_additional_students()
+        exams_added = seed_exam_records()
 
         db.session.commit()
-        print(f"Database initialized successfully. Added {added} student records.")
+        print(f"Database initialized successfully. Added {added} student records and {exams_added} exam records.")
 
 if __name__ == '__main__':
     init_db()

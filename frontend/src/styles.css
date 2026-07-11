@@ -788,6 +788,11 @@ progress {
   background: #fee2e2;
 }
 
+.admin-metric-card.violet > span {
+  color: #6d28d9;
+  background: #ede9fe;
+}
+
 .admin-section-header {
   display: flex;
   align-items: center;
@@ -1481,6 +1486,10 @@ progress {
   background: #dc2626;
 }
 
+.admin-metric-card.violet::before {
+  background: #7c3aed;
+}
+
 .admin-metric-card.clickable:hover {
   transform: translateY(-4px);
   border-color: #99f6e4;
@@ -1665,6 +1674,112 @@ progress {
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   outline: none;
+}
+
+.admin-form .checkbox-row {
+  display: flex;
+  grid-template-columns: none;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-form .checkbox-row input {
+  width: 18px;
+  min-height: 18px;
+  accent-color: #0f766e;
+}
+
+.exam-module {
+  display: grid;
+  gap: 24px;
+}
+
+.responsive-table {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.exam-table {
+  min-width: 920px;
+}
+
+.exam-table td {
+  white-space: nowrap;
+}
+
+.table-panel-title {
+  padding: 18px 20px;
+  color: #0f172a;
+  border-bottom: 1px solid #dbe3ed;
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+
+.countdown-badge,
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 28px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.admin-table td .countdown-badge,
+.admin-table td .status-badge {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 0;
+}
+
+.countdown-badge {
+  color: #075985;
+  background: #e0f2fe;
+  border: 1px solid #bae6fd;
+}
+
+.countdown-badge.urgent {
+  color: #9a3412;
+  background: #ffedd5;
+  border-color: #fed7aa;
+}
+
+.status-badge.published,
+.status-badge.completed {
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
+}
+
+.status-badge.scheduled,
+.status-badge.awaiting-result {
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+}
+
+.status-badge.draft {
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+}
+
+.compact-action {
+  min-height: 30px;
+  padding: 0 9px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.mini-stat-card span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .admin-form input:focus {

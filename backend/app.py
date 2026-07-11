@@ -6,7 +6,7 @@ import os
 
 from sqlalchemy import func
 
-from models import db, User, Student, StudyHours, Activity, ExamMark, Attendance, Assignment, Prediction
+from models import db, User, Student, StudyHours, Activity, ExamMark, Attendance, Assignment, Prediction, Exam
 
 app = Flask(__name__)
 CORS(app)
@@ -177,6 +177,61 @@ def get_student_summary(student):
 def get_all_student_summaries():
     return [get_student_summary(student) for student in Student.query.all()]
 
+def serialize_exam(exam):
+    return {
+        "exam_id": exam.exam_id,
+        "subject": exam.subject,
+        "exam_name": exam.exam_name,
+        "exam_type": exam.exam_type,
+        "class": exam.current_class,
+        "division": exam.division,
+        "date": exam.date,
+        "start_time": exam.start_time,
+        "end_time": exam.end_time,
+        "duration": exam.duration,
+        "hall_number": exam.hall_number,
+        "maximum_marks": exam.maximum_marks,
+        "status": exam.status,
+        "result_published": exam.result_published,
+    }
+
+def get_exam_payload(data, exam=None):
+    payload = {
+        "subject": data.get("subject", exam.subject if exam else None),
+        "exam_name": data.get("exam_name", exam.exam_name if exam else None),
+        "exam_type": data.get("exam_type", exam.exam_type if exam else "Unit Test"),
+        "current_class": data.get("class", data.get("current_class", exam.current_class if exam else None)),
+        "division": data.get("division", exam.division if exam else None),
+        "date": data.get("date", exam.date if exam else None),
+        "start_time": data.get("start_time", exam.start_time if exam else None),
+        "end_time": data.get("end_time", exam.end_time if exam else None),
+        "duration": data.get("duration", exam.duration if exam else None),
+        "hall_number": data.get("hall_number", exam.hall_number if exam else None),
+        "maximum_marks": data.get("maximum_marks", exam.maximum_marks if exam else 100),
+        "status": data.get("status", exam.status if exam else "Draft"),
+        "result_published": data.get("result_published", exam.result_published if exam else False),
+    }
+    required = ["subject", "exam_name", "exam_type", "date", "start_time", "end_time", "duration"]
+    missing = [field for field in required if payload.get(field) in (None, "")]
+    if missing:
+        return None, missing
+    return payload, []
+
+def add_exam_result_state(exam_dict):
+    exam_dict["marks_available"] = bool(exam_dict["result_published"])
+    exam_dict["result_status"] = "Published" if exam_dict["result_published"] else "Awaiting Result"
+    return exam_dict
+
+def query_exams():
+    return Exam.query.order_by(Exam.date.asc(), Exam.start_time.asc()).all()
+
+def get_exam_groups():
+    exams = [serialize_exam(exam) for exam in query_exams()]
+    upcoming = [exam for exam in exams if exam["exam_type"] == "Unit Test" and exam["status"] in ("Published", "Scheduled")]
+    finals = [exam for exam in exams if exam["exam_type"] == "Final"]
+    completed = [add_exam_result_state(exam) for exam in exams if exam["status"] == "Completed"]
+    return {"unitTests": upcoming, "finalExams": finals, "completedExams": completed}
+
 # ----------------- AUTH -----------------
 
 @app.post("/api/admin/login")
@@ -319,6 +374,83 @@ def admin_assignment_dashboard():
 def admin_risk_dashboard():
     summaries = get_all_student_summaries()
     return jsonify([s for s in summaries if s["riskLevel"] != "Low"])
+
+
+# ----------------- EXAM SCHEDULE ENDPOINTS -----------------
+
+@app.get("/api/exams/schedule")
+def student_exam_schedule():
+    groups = get_exam_groups()
+    visible_completed = [
+        exam for exam in groups["completedExams"]
+        if exam["result_published"] or exam["status"] == "Completed"
+    ]
+    return jsonify({
+        "unitTests": groups["unitTests"],
+        "finalExams": [exam for exam in groups["finalExams"] if exam["status"] in ("Published", "Scheduled", "Completed")],
+        "completedExams": visible_completed,
+    })
+
+@app.get("/api/exams/completed")
+def completed_exams():
+    return jsonify(get_exam_groups()["completedExams"])
+
+@app.get("/api/admin/exams")
+def admin_exam_schedule():
+    return jsonify(get_exam_groups())
+
+@app.post("/api/admin/exams")
+def create_exam():
+    payload, missing = get_exam_payload(request.json or {})
+    if missing:
+        return jsonify({"message": f"Missing fields: {', '.join(missing)}"}), 400
+    exam = Exam(**payload)
+    db.session.add(exam)
+    db.session.commit()
+    return jsonify(serialize_exam(exam)), 201
+
+@app.put("/api/admin/exams/<int:exam_id>")
+def update_exam(exam_id):
+    exam = Exam.query.get(exam_id)
+    if not exam:
+        return jsonify({"message": "Not found"}), 404
+    payload, missing = get_exam_payload(request.json or {}, exam)
+    if missing:
+        return jsonify({"message": f"Missing fields: {', '.join(missing)}"}), 400
+    for field, value in payload.items():
+        setattr(exam, field, value)
+    db.session.commit()
+    return jsonify(serialize_exam(exam))
+
+@app.patch("/api/admin/exams/<int:exam_id>/publish")
+def publish_exam(exam_id):
+    exam = Exam.query.get(exam_id)
+    if not exam:
+        return jsonify({"message": "Not found"}), 404
+    exam.status = "Published"
+    db.session.commit()
+    return jsonify(serialize_exam(exam))
+
+@app.patch("/api/admin/exams/<int:exam_id>/result")
+def update_exam_result(exam_id):
+    exam = Exam.query.get(exam_id)
+    if not exam:
+        return jsonify({"message": "Not found"}), 404
+    data = request.json or {}
+    exam.result_published = bool(data.get("result_published", exam.result_published))
+    if data.get("status"):
+        exam.status = data["status"]
+    db.session.commit()
+    return jsonify(serialize_exam(exam))
+
+@app.delete("/api/admin/exams/<int:exam_id>")
+def delete_exam(exam_id):
+    exam = Exam.query.get(exam_id)
+    if not exam:
+        return jsonify({"message": "Not found"}), 404
+    db.session.delete(exam)
+    db.session.commit()
+    return jsonify({"success": True})
 
 
 # ----------------- MARKS, ATTENDANCE, ASSIGNMENTS -----------------
