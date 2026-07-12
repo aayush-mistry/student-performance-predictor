@@ -302,32 +302,79 @@ textarea {
 }
 
 .score-orb {
-  display: grid;
-  place-items: center;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: 0 0 auto;
-  width: 150px;
-  height: 150px;
+  width: 126px;
+  height: 126px;
   border-radius: 50%;
-  border: 10px solid rgba(249, 115, 22, 0.9);
-  background: rgba(255, 255, 255, 0.08);
   text-align: center;
 }
 
-.score-orb span {
-  display: block;
-  font-size: 2.2rem;
-  font-weight: 800;
+.score-orb::before {
+  position: absolute;
+  inset: 12px;
+  content: "";
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(23, 32, 51, 0.96), rgba(76, 85, 99, 0.92));
 }
 
-.score-orb small {
-  width: 90px;
+.score-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.score-ring-track,
+.score-ring-value {
+  fill: none;
+  stroke-width: 8;
+}
+
+.score-ring-track {
+  stroke: rgba(226, 232, 240, 0.34);
+}
+
+.score-ring-value {
+  stroke: #f97316;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+
+.score-copy {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 5px;
+  justify-items: center;
+}
+
+.score-copy span {
+  display: block;
+  font-size: 1.9rem;
+  font-weight: 900;
+  line-height: 0.95;
+}
+
+.score-copy small {
+  max-width: 78px;
   color: #e2e8f0;
+  font-size: 0.78rem;
+  line-height: 1.15;
 }
 
 .panel-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
   gap: 24px;
+}
+
+.activity-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.8fr);
 }
 
 .panel {
@@ -364,6 +411,10 @@ textarea {
 
 .chart.tall {
   height: 360px;
+}
+
+.chart.activity-chart {
+  height: 280px;
 }
 
 .chart.pie {
@@ -2305,6 +2356,7 @@ progress {
 @media (max-width: 1020px) {
   .layout,
   .panel-grid,
+  .activity-grid,
   .auth-card {
     grid-template-columns: 1fr;
   }
@@ -2395,8 +2447,26 @@ progress {
   }
 
   .score-orb {
-    width: 120px;
-    height: 120px;
+    width: 104px;
+    height: 104px;
+  }
+
+  .score-orb::before {
+    inset: 10px;
+  }
+
+  .score-ring-track,
+  .score-ring-value {
+    stroke-width: 7;
+  }
+
+  .score-copy span {
+    font-size: 1.55rem;
+  }
+
+  .score-copy small {
+    max-width: 68px;
+    font-size: 0.72rem;
   }
 
   .panel {

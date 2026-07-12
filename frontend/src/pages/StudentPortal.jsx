@@ -320,8 +320,21 @@ export default function StudentPortal({ currentUser, onLogout }) {
               <h1>{student.name}</h1>
             </div>
             <div className="score-orb">
-              <span>{prediction.predictedAverage}%</span>
-              <small>Predicted average</small>
+              <svg className="score-ring" viewBox="0 0 120 120" aria-hidden="true">
+                <circle className="score-ring-track" cx="60" cy="60" r="52" pathLength="100" />
+                <circle
+                  className="score-ring-value"
+                  cx="60"
+                  cy="60"
+                  r="52"
+                  pathLength="100"
+                  style={{ strokeDasharray: `${prediction.predictedAverage} 100` }}
+                />
+              </svg>
+              <div className="score-copy">
+                <span>{prediction.predictedAverage}%</span>
+                <small>Predicted average</small>
+              </div>
             </div>
           </section>
           {page}
@@ -338,17 +351,17 @@ function Activity({ student }) {
   }));
 
   return (
-    <section className="panel-grid">
+    <section className="panel-grid activity-grid">
       <div className="panel large">
         <PanelTitle icon={LineChart} title="Overall Activity" />
-        <div className="chart tall">
+        <div className="chart tall activity-chart">
           <ResponsiveContainer>
-            <BarChart data={activityData}>
+            <BarChart data={activityData} barCategoryGap="69%" barGap={5} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-              <YAxis />
+              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+              <YAxis width={34} />
               <Tooltip />
-              <Bar dataKey="hours" radius={[8, 8, 0, 0]} fill="#f97316" />
+              <Bar dataKey="hours" barSize={20} maxBarSize={20} radius={[5, 5, 0, 0]} fill="#f97316" />
             </BarChart>
           </ResponsiveContainer>
         </div>
